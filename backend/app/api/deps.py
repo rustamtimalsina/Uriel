@@ -16,6 +16,7 @@ from backend.app.preprocessing.preprocessing_factory import PreprocessingFactory
 from backend.app.query_expansion.spell_correction import SpellCorrector
 from backend.app.parser.content_provider import ContentProvider
 from backend.app.services.watcher_service import DirectoryWatcherService
+from backend.app.services.rag_service import RAGService
 
 @lru_cache
 def get_repositories():
@@ -66,3 +67,6 @@ def get_document_service() -> DocumentService:
 def get_watcher_service() -> DirectoryWatcherService:
     _, _, _, directory_repo = get_repositories()
     return DirectoryWatcherService(directory_repo, get_index_service())
+
+def get_rag_service() -> RAGService:
+    return RAGService(get_search_service())

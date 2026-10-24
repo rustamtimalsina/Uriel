@@ -1,4 +1,4 @@
-#backend/app/schemas/search.py
+# backend/app/schemas/search.py
 from pydantic import BaseModel
 from backend.app.algorithms.ranking_factory import RankingAlgorithmType
 
@@ -25,3 +25,13 @@ class SearchResponse(BaseModel):
 class SearchResultsOut(BaseModel):
     results: list[SearchResponse]
     corrected_terms: dict[str, str] = {}
+
+class AskRequest(BaseModel):
+    question: str
+    top_k: int = 3
+    model: str | None = None
+
+class AskResponse(BaseModel):
+    answer: str
+    sources: list[SearchResponse]
+    model_used: str

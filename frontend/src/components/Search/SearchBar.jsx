@@ -16,7 +16,7 @@ const SearchBar = forwardRef(function SearchBar(
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [algorithm, setAlgorithm] = useState(
-    searchParams.get("algorithm") || config.ranking.default_algorithm
+    searchParams.get("algorithm") || config.ranking.default_algorithm || "bm25"
   );
   const [topK, setTopK] = useState(
     searchParams.get("top_k")
@@ -33,7 +33,7 @@ const SearchBar = forwardRef(function SearchBar(
       isFirstConfigSync.current = false;
       return;
     }
-    setAlgorithm(config.ranking.default_algorithm);
+    setAlgorithm(config.ranking.default_algorithm || "bm25");
     setTopK(config.ranking.default_top_k);
   }, [config.ranking.default_algorithm, config.ranking.default_top_k]);
 
@@ -63,7 +63,7 @@ const SearchBar = forwardRef(function SearchBar(
     })
       .then((response) => {
         onResults(response.data.results);
-        onCorrectedTerms(response.data.corrected_terms || null);
+        onCorrectedTerms(response.data.corrected_terms);
       })
       .catch((err) => {
         onError(err.message);
@@ -73,20 +73,34 @@ const SearchBar = forwardRef(function SearchBar(
       });
   };
 
-  // Auto-run the search once on mount if the URL already has a query —
-  // this is what makes "back to search" actually restore results, since
-  // SearchPage/SearchBar remount fresh each time.
+  const isFirstParamSync = useRef(true);
   useEffect(() => {
-    if (searchParams.get("q")) {
-      runSearch(searchParams.get("q"));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!isFirstParamSync.current) return;
+    isFirstParamSync.current = false;
 
-  // Exposed so SearchPage can re-run the search with corrected spelling
-  // applied, without the frontend silently overriding what the user typed.
+    const q = searchParams.get("q");
+    if (!q) return;
+
+    searchDocuments({
+      query: q,
+      algorithm: searchParams.get("algorithm") || algorithm,
+      top_k: searchParams.get("top_k") ? Number(searchParams.get("top_k")) : topK,
+      expand_query: searchParams.get("expand") === "true",
+    })
+      .then((response) => {
+        onResults(response.data.results);
+        onCorrectedTerms(response.data.corrected_terms);
+      })
+      .catch((err) => {
+        onError(err.message);
+      })
+      .finally(() => {
+        onLoadingChange(false);
+      });
+  }, [searchParams, algorithm, topK, onError, onLoadingChange, onResults, onCorrectedTerms]);
+
   useImperativeHandle(ref, () => ({
-    runSearchWithCorrections: (correctedTerms) => {
+    runSearchWithCorrections(correctedTerms) {
       let corrected = query;
       Object.entries(correctedTerms).forEach(([original, replacement]) => {
         const pattern = new RegExp(`\\b${escapeRegExp(original)}\\b`, "gi");
@@ -117,10 +131,24 @@ const SearchBar = forwardRef(function SearchBar(
       <div className="search-segmented" role="group" aria-label="Ranking algorithm">
         <button
           type="button"
+          className={`search-segment ${algorithm === "hybrid" ? "is-active" : ""}`}
+          onClick={() => setAlgorithm("hybrid")}
+        >
+          Hybrid
+        </button>
+        <button
+          type="button"
           className={`search-segment ${algorithm === "bm25" ? "is-active" : ""}`}
           onClick={() => setAlgorithm("bm25")}
         >
           BM25
+        </button>
+        <button
+          type="button"
+          className={`search-segment ${algorithm === "semantic" ? "is-active" : ""}`}
+          onClick={() => setAlgorithm("semantic")}
+        >
+          Semantic
         </button>
         <button
           type="button"
@@ -147,12 +175,12 @@ const SearchBar = forwardRef(function SearchBar(
             checked={expandQuery}
             onChange={(e) => setExpandQuery(e.target.checked)}
           />
-          <span className="toggle-slider" />
+          <span className="toggle-slider"></span>
         </span>
-        Expand query
+        <span className="search-toggle-label">Expand</span>
       </label>
 
-      <button className="search-button" type="submit">
+      <button className="search-submit" type="submit">
         Search
       </button>
     </form>

@@ -9,12 +9,9 @@ function readStoredBaseUrl() {
 
 const apiClient = axios.create({
   baseURL: readStoredBaseUrl(),
-  timeout: 8000,
+  timeout: 15000,
 });
 
-// Call this to change the backend URL at runtime. Persisted in localStorage
-// so it survives reloads; all future requests through apiClient pick it up
-// automatically since axios reads defaults.baseURL fresh each request.
 export const setApiBaseUrl = (url) => {
   const normalized = url.trim().replace(/\/+$/, "");
   localStorage.setItem(STORAGE_KEY, normalized);
@@ -23,9 +20,6 @@ export const setApiBaseUrl = (url) => {
 
 export const getApiBaseUrl = () => apiClient.defaults.baseURL;
 
-// Used only by the onboarding "connect to backend" step, to verify a URL
-// works BEFORE committing to it. Uses a fresh axios call, not apiClient, so
-// a bad URL never overwrites the working connection.
 export const testBackendConnection = async (url) => {
   const normalized = url.trim().replace(/\/+$/, "");
   const response = await axios.get(`${normalized}/config`, { timeout: 5000 });
@@ -34,6 +28,10 @@ export const testBackendConnection = async (url) => {
 
 export const searchDocuments = (searchRequest) => {
   return apiClient.post("/search", searchRequest);
+};
+
+export const askAI = (askRequest) => {
+  return apiClient.post("/search/ask", askRequest);
 };
 
 export const getConfig = () => {
@@ -68,8 +66,8 @@ export const updateQueryExpansionConfig = (data) => {
   return apiClient.put("/config/query-expansion", data);
 };
 
-export const buildIndex = () => {
-  return apiClient.post("/index/build");
+export const buildIndex = (sync = false) => {
+  return apiClient.post(`/index/build${sync ? "?sync=true" : ""}`);
 };
 
 export const getIndexStatus = () => {
