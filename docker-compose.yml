@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./backend/app/data:/app/backend/app/data
+    environment:
+      - DB_PATH=/app/backend/app/data/uriel.db
+      - DATA_DIR=/app/data/documents
+      - AUTO_INDEX_ON_STARTUP=true
+      - ENABLE_FILE_WATCHER=true
+    restart: unless-stopped
