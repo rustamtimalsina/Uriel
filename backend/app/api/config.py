@@ -5,7 +5,7 @@ from backend.app.schemas.config import (
     QueryExpansionConfigUpdate, DirectoryOut, DirectoryCreate,
 )
 from backend.app.services.config_service import ConfigService, DirectoryValidationError
-from backend.app.api.deps import get_config_service
+from backend.app.api.deps import get_config_service, get_watcher_service
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -34,7 +34,12 @@ def list_directories(svc: ConfigService = Depends(get_config_service)):
 @router.post("/directories", response_model=DirectoryOut, status_code=201)
 def add_directory(body: DirectoryCreate, svc: ConfigService = Depends(get_config_service)):
     try:
-        return svc.add_directory(body.path)
+        res = svc.add_directory(body.path)
+        try:
+            get_watcher_service().sync_watches()
+        except Exception:
+            pass
+        return res
     except DirectoryValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -42,12 +47,15 @@ def add_directory(body: DirectoryCreate, svc: ConfigService = Depends(get_config
 def delete_directory(dir_id: int, svc: ConfigService = Depends(get_config_service)):
     try:
         svc.remove_directory(dir_id)
+        try:
+            get_watcher_service().sync_watches()
+        except Exception:
+            pass
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    
-# backend/app/api/config.py
+
 @router.put("/onboarding/complete")
 def complete_onboarding(svc: ConfigService = Depends(get_config_service)):
     return svc.mark_onboarding_complete()["onboarding"]

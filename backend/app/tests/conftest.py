@@ -24,13 +24,6 @@ from backend.app.storage.sqlite_repository import (
 
 @pytest.fixture(params=["traditional", "spacy"])
 def preprocessing_config(request) -> PreprocessingConfig:
-    """
-    Runs any test that depends on this fixture once per preprocessing engine —
-    including spaCy, the actual default, not just the dependency-light
-    traditional engine. Skips only the spaCy parametrization if the model
-    isn't installed, so `uv run pytest` still passes on a machine that hasn't
-    run `spacy download` yet.
-    """
     if request.param == "spacy" and not SPACY_MODEL_AVAILABLE:
         pytest.skip("en_core_web_sm not installed — run `uv run python -m spacy download en_core_web_sm`")
     return _PREPROCESSING_PROFILES[request.param]
@@ -48,24 +41,20 @@ def ensure_nltk_data():
 
 @pytest.fixture(autouse=True)
 def isolate_real_settings(tmp_path, monkeypatch):
-    """
-    main.py's lifespan calls get_repositories()/get_index_service() directly,
-    bypassing Depends() — so dependency_overrides can't reach it. Point the
-    *real* settings at throwaway paths and disable auto-index so app startup
-    (triggered by TestClient in system tests) never touches a real db file
-    or a real directory on this machine.
-    """
     monkeypatch.setenv("DB_PATH", str(tmp_path / "lifespan_only.db"))
     monkeypatch.setenv("DEFAULT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("AUTO_INDEX_ON_STARTUP", "false")
+    monkeypatch.setenv("ENABLE_FILE_WATCHER", "false")
 
     from backend.app.config.settings import get_settings
-    from backend.app.api.deps import get_repositories
+    from backend.app.api.deps import get_repositories, get_watcher_service
     get_settings.cache_clear()
     get_repositories.cache_clear()
+    get_watcher_service.cache_clear()
     yield
     get_settings.cache_clear()
     get_repositories.cache_clear()
+    get_watcher_service.cache_clear()
 
 
 @pytest.fixture

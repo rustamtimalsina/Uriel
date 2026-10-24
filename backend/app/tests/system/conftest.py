@@ -2,11 +2,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
-from backend.app.api.deps import get_index_service, get_search_service, get_config_service
+from backend.app.api.deps import (
+    get_index_service, get_search_service, get_config_service, get_watcher_service
+)
 from backend.app.index.indexer import Indexer
 from backend.app.parser.content_provider import ContentProvider
 from backend.app.parser.pdf_parser import PDFParser
 from backend.app.parser.txt_parser import TXTParser
+from backend.app.parser.docx_parser import DOCXParser
 from backend.app.services.index_service import IndexService
 from backend.app.services.search_service import SearchService
 from backend.app.services.config_service import ConfigService
@@ -27,12 +30,18 @@ class SynchronousTestIndexService(IndexService):
         return True
 
 
+class DummyWatcher:
+    def start(self): pass
+    def stop(self): pass
+    def sync_watches(self): pass
+
+
 @pytest.fixture
 def client(repos, sample_corpus_dir, preprocessing_config):
     doc_repo, index_repo, config_repo, directory_repo = repos
     directory_repo.add(str(sample_corpus_dir))
     preprocessor = PreprocessingFactory.create(preprocessing_config)
-    content_provider = ContentProvider(PDFParser(), TXTParser())
+    content_provider = ContentProvider(PDFParser(), TXTParser(), DOCXParser())
 
     app.dependency_overrides[get_index_service] = lambda: SynchronousTestIndexService(
         Indexer(doc_repo, index_repo, preprocessing_config), directory_repo
@@ -43,6 +52,7 @@ def client(repos, sample_corpus_dir, preprocessing_config):
     app.dependency_overrides[get_config_service] = lambda: ConfigService(
         config_repo, directory_repo, allowed_root=None
     )
+    app.dependency_overrides[get_watcher_service] = lambda: DummyWatcher()
 
     with TestClient(app) as c:
         yield c
