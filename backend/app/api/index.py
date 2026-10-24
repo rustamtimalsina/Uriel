@@ -1,5 +1,5 @@
-#backend/app/api/index.py
-from fastapi import APIRouter, Depends, HTTPException
+# backend/app/api/index.py
+from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.app.services.index_service import IndexService
 from backend.app.api.deps import get_index_service
 from backend.app.schemas.index import IndexStatusOut, IndexActionOut, SkippedFileOut
@@ -7,13 +7,20 @@ from backend.app.schemas.index import IndexStatusOut, IndexActionOut, SkippedFil
 router = APIRouter(prefix="/index", tags=["index"])
 
 @router.post("/build", response_model=IndexActionOut)
-def build(svc: IndexService = Depends(get_index_service)):
+def build(sync: bool = Query(False, description="Run synchronously"), svc: IndexService = Depends(get_index_service)):
+    if sync:
+        res = svc.build(progress=svc.progress_tracker)
+        return IndexActionOut(status="completed", total_documents=res.get("total_documents"), indexed=res.get("indexed"))
     if not svc.start_build_async():
         raise HTTPException(status_code=409, detail="An indexing run is already in progress.")
-    return IndexActionOut(status="started")
+    last_res = getattr(svc, "_last_result", None) or {}
+    return IndexActionOut(status="started", total_documents=last_res.get("total_documents"), indexed=last_res.get("indexed"))
 
 @router.post("/rebuild", response_model=IndexActionOut)
-def rebuild(svc: IndexService = Depends(get_index_service)):
+def rebuild(sync: bool = Query(False, description="Run synchronously"), svc: IndexService = Depends(get_index_service)):
+    if sync:
+        res = svc.rebuild(progress=svc.progress_tracker)
+        return IndexActionOut(status="completed", indexed=res.get("reindexed"))
     if not svc.start_rebuild_async():
         raise HTTPException(status_code=409, detail="An indexing run is already in progress.")
     return IndexActionOut(status="started")

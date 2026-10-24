@@ -19,3 +19,5 @@ class IndexStatusOut(BaseModel):
 
 class IndexActionOut(BaseModel):
     status: str
+    total_documents: int | None = None
+    indexed: int | None = None

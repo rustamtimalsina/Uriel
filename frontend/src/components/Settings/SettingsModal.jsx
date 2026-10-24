@@ -69,7 +69,7 @@ function SettingsModal({ isOpen, onClose, config, onConfigUpdate }) {
       .finally(() => {
         setStatsLoading(false);
       });
-  }, [isOpen]);
+  }, [isOpen, config]);
 
   if (!isOpen) {
     return null;

@@ -1,6 +1,6 @@
 from rapidfuzz.distance import Levenshtein
 from backend.app.storage.base import IndexRepository
-from .shinge_index import ShingleIndex
+from .shingle_index import ShingleIndex
 
 class SpellCorrector:
     """

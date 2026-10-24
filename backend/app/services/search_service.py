@@ -1,7 +1,9 @@
-#backend/app/services/search_service.py
+# backend/app/services/search_service.py
 from backend.app.algorithms.ranking_factory import RankingFactory, RankingAlgorithmType
 from backend.app.models.search_result import SearchResult
 from backend.app.parser.content_provider import ContentProvider
+from backend.app.parser.pdf_parser import PDFParser
+from backend.app.parser.txt_parser import TXTParser
 from backend.app.services.config_service import DEFAULT_CONFIG
 from backend.app.query_expansion.rocchio import RocchioFeedback, RocchioParams
 from backend.app.query_expansion.wordnet_expansion import WordNetExpander
@@ -10,7 +12,7 @@ from backend.app.services.snippet_service import SnippetBuilder
 
 class SearchService:
     def __init__(self, doc_repo, index_repo, preprocessor, config_repo,
-                 content_provider: ContentProvider,
+                 content_provider: ContentProvider | None = None,
                  ranking_factory=RankingFactory,
                  spell_corrector: SpellCorrector | None = None):
         self.doc_repo = doc_repo
@@ -19,23 +21,28 @@ class SearchService:
         self.preprocessor = preprocessor
         self.ranking_factory = ranking_factory
         self.spell_corrector = spell_corrector
+        if content_provider is None:
+            content_provider = ContentProvider(PDFParser(), TXTParser())
         self.snippet_builder = SnippetBuilder(index_repo, content_provider)
 
     def _algorithm_kwargs(self, algorithm, config):
         return config["ranking"]["bm25"] if algorithm == RankingAlgorithmType.BM25 else {}
     
-    def _base_query_weights(self, query:str, expand: bool, config) -> dict[str, float]:
+    def _base_query_weights(self, query: str | list[str], expand: bool, config) -> dict[str, float]:
         config = config or DEFAULT_CONFIG
-        query_terms = self.preprocessor.process(query).terms
+        if isinstance(query, list):
+            query_terms = query
+        else:
+            query_terms = self.preprocessor.process(query).terms
         if not expand:
-            return {term: query_terms.count(term) *1.0 for term in set(query_terms)}
+            return {term: query_terms.count(term) * 1.0 for term in set(query_terms)}
         
         query_expander = config["query_expansion"]
         expander = WordNetExpander(
             query_expander["wordnet_max_synonyms_per_term"],
             query_expander["wordnet_synonym_weight"],
         )
-        return expander.expand(query_terms, normalize = lambda s: self.preprocessor.process(s).terms)
+        return expander.expand(query_terms, normalize=lambda s: self.preprocessor.process(s).terms)
 
     def search(self, query: str, algorithm = None, top_k = None, expand_query: bool | None = None) -> tuple[list[SearchResult], dict[str, str]]:
         config = self.config_repo.get() or DEFAULT_CONFIG
@@ -43,7 +50,7 @@ class SearchService:
         top_k = top_k or config["ranking"]["default_top_k"]
         expand = config["query_expansion"]["wordnet_enabled"] if expand_query is None else expand_query
         query_expansion_config = config["query_expansion"]
-        spelling_correction_enabled = query_expansion_config.get( "spelling_correction_enabled",  False)
+        spelling_correction_enabled = query_expansion_config.get("spelling_correction_enabled", False)
 
         terms = self.preprocessor.process(query).terms
         corrections: dict[str, str] = {}
@@ -52,7 +59,8 @@ class SearchService:
             if corrections:
                 terms = [corrections.get(term, term) for term in terms]
 
-        query_weights = self._base_query_weights(query, expand, config)        
+        effective_query = terms if corrections else query
+        query_weights = self._base_query_weights(effective_query, expand, config)        
         ranker = self.ranking_factory.create(algorithm, **self._algorithm_kwargs(algorithm, config))
         documents = self.doc_repo.all()
         results = ranker.score(query_weights, self.index_repo, documents, top_k)
@@ -91,7 +99,7 @@ class SearchService:
         ranker = self.ranking_factory.create(algorithm, **self._algorithm_kwargs(algorithm, config))
         documents = self.doc_repo.all()
 
-         # Ask for one extra: the source document will almost always be its own top match
+        # Ask for one extra: the source document will almost always be its own top match
         # (perfect self-similarity), so we drop it after scoring rather than filtering the
         # postings beforehand (which would require special-casing the ranking algorithms).
         raw_results = ranker.score(query_weights, self.index_repo, documents, top_k + 1)
