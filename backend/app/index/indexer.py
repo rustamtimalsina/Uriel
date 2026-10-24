@@ -30,9 +30,6 @@ class Indexer:
         self.content_provider = ContentProvider(self.pdf_parser, self.txt_parser, self.docx_parser)
     
     def iter_indexable_files(self, directory: str) -> Iterator[str]:
-        """Used by IndexService to pre-count files to progress.set_total(),
-        and internally by index_directory to avoid walking the tree twice 
-        with different logic"""
         for root, _, files in os.walk(directory):
             for file in files:
                 ext = os.path.splitext(file)[1].lower()
@@ -70,13 +67,17 @@ class Indexer:
         """Returns True if the document was actually indexed, False if it
         produced no tokens (e.g. empty/unreadable file)."""
         if self.doc_repo.exists_by_path(path):
-            return False  # caller already checked, but keep this safe if called directly
+            return False
 
         positions_map: dict[str, list[int]] = defaultdict(list)
+        raw_text_snippets: list[str] = []
         offset = 0
+
         for page_num, page_text in enumerate(pages):
             if not page_text or not page_text.strip():
                 continue
+            if len(" ".join(raw_text_snippets)) < 3000:
+                raw_text_snippets.append(page_text[:800])
             try:
                 processed = self.preprocessor.process(page_text)
             except Exception:
@@ -109,4 +110,15 @@ class Indexer:
         ]
         self.index_repo.add_postings_bulk(entries)
         self.index_repo.add_document_terms(doc_id, {t: len(p) for t, p in positions_map.items()})
+
+        # Generate and store dense semantic vector embedding
+        if raw_text_snippets and hasattr(self.index_repo, "add_embedding"):
+            try:
+                from backend.app.algorithms.semantic import SemanticRanking
+                sample_text = " ".join(raw_text_snippets)[:2000]
+                vec = SemanticRanking().embed_text(sample_text)
+                self.index_repo.add_embedding(doc_id, vec)
+            except Exception:
+                logger.warning("Could not generate embedding for %s", path)
+
         return True

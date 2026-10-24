@@ -5,6 +5,8 @@ from backend.app.models.posting import Posting
 from backend.app.models.document import Document
 from backend.app.algorithms.tfidf import TFIDFRanking
 from backend.app.algorithms.bm25 import BM25Ranking
+from backend.app.algorithms.semantic import SemanticRanking
+from backend.app.algorithms.hybrid import HybridRanking
 from backend.app.tests.unit.fakes import FakeIndexRepo
 
 pytestmark = pytest.mark.unit
@@ -61,3 +63,36 @@ class TestBM25Ranking:
         s1 = BM25Ranking().score({"cat": 1.0}, repo, documents, 10)[0].score
         s2 = BM25Ranking().score({"cat": 2.0}, repo, documents, 10)[0].score
         assert math.isclose(s2, s1 * 2, rel_tol=1e-9)
+
+
+class TestSemanticRanking:
+    def test_semantic_ranking_finds_most_similar_embedding(self, monkeypatch):
+        ranker = SemanticRanking()
+        monkeypatch.setattr(ranker, "embed_text", lambda text: [1.0, 0.0])
+
+        documents = {1: _doc(1, 10), 2: _doc(2, 10)}
+        repo = FakeIndexRepo(embeddings={
+            1: [1.0, 0.0],
+            2: [0.0, 1.0],
+        })
+
+        results = ranker.score({"query": 1.0}, repo, documents, top_k=5)
+        assert len(results) == 2
+        assert results[0].doc_id == 1
+        assert results[0].score > results[1].score
+
+
+class TestHybridRanking:
+    def test_hybrid_fuses_bm25_and_semantic_rrf(self, monkeypatch):
+        hybrid = HybridRanking(k=60)
+        monkeypatch.setattr(hybrid.semantic, "embed_text", lambda text: [1.0, 0.0])
+
+        documents = {1: _doc(1, 10), 2: _doc(2, 10)}
+        repo = FakeIndexRepo(
+            postings_by_term={"cat": [Posting(1, 5, [])]},
+            embeddings={1: [1.0, 0.0], 2: [0.0, 1.0]},
+        )
+
+        results = hybrid.score({"cat": 1.0}, repo, documents, top_k=5)
+        assert len(results) == 2
+        assert results[0].doc_id == 1

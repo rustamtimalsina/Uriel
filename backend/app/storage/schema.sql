@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS postings (
     PRIMARY KEY (term, doc_id)
 );
 
-
 CREATE TABLE IF NOT EXISTS app_config (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL  -- JSON blob: preprocessing / ranking / query_expansion settings
@@ -34,6 +33,11 @@ CREATE TABLE IF NOT EXISTS document_terms (
     term           TEXT NOT NULL,
     term_frequency INTEGER NOT NULL,
     PRIMARY KEY (doc_id, term)
+);
+
+CREATE TABLE IF NOT EXISTS document_embeddings (
+    doc_id         INTEGER PRIMARY KEY REFERENCES documents(doc_id) ON DELETE CASCADE,
+    embedding      BLOB NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_document_terms_doc ON document_terms(doc_id);

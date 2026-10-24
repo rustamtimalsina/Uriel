@@ -1,4 +1,4 @@
-#backend/app/storage/sqlite_repository.py
+# backend/app/storage/sqlite_repository.py
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -23,7 +23,6 @@ class SQLiteDocumentRepository(DocumentRepository):
             "SELECT doc_id, path, title, length, last_modified FROM documents WHERE doc_id = ?",
             (doc_id,)
         ).fetchone()
-        
         return self._row_to_doc(row) if row else None
     
     def get_many(self, doc_ids: list[int]) -> dict[int, Document]:
@@ -41,7 +40,6 @@ class SQLiteDocumentRepository(DocumentRepository):
         rows = self.conn.execute(
             "SELECT doc_id, path, title, length, last_modified FROM documents"
         ).fetchall()
-
         return {row[0]: self._row_to_doc_lightweight(row) for row in rows}
     
     def exists_by_path(self, path: str) -> bool:
@@ -64,8 +62,6 @@ class SQLiteDocumentRepository(DocumentRepository):
 
     @staticmethod
     def _row_to_doc_lightweight(row) -> Document:
-        """Used by all() only — omits content since ranking never reads it,
-        and loading full text for the whole corpus on every search would be wasteful."""
         return Document(
             doc_id=row[0],
             path=row[1],
@@ -74,6 +70,7 @@ class SQLiteDocumentRepository(DocumentRepository):
             last_modified=datetime.fromisoformat(row[4]),
         )
     
+
 class SQLiteIndexRepository(IndexRepository):
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
@@ -125,11 +122,31 @@ class SQLiteIndexRepository(IndexRepository):
         rows = self.conn.execute("SELECT DISTINCT term FROM postings").fetchall()
         return [row[0] for row in rows]
 
+    def add_embedding(self, doc_id: int, vector: list[float]) -> None:
+        blob = json.dumps(vector).encode("utf-8")
+        self.conn.execute(
+            "INSERT OR REPLACE INTO document_embeddings (doc_id, embedding) VALUES (?, ?)",
+            (doc_id, blob),
+        )
+        self.conn.commit()
+
+    def get_embeddings(self) -> dict[int, list[float]]:
+        try:
+            rows = self.conn.execute("SELECT doc_id, embedding FROM document_embeddings").fetchall()
+            return {r[0]: json.loads(r[1].decode("utf-8")) for r in rows}
+        except sqlite3.OperationalError:
+            return {}
+
     def clear(self) -> None:
         self.conn.execute("DELETE FROM postings")
         self.conn.execute("DELETE FROM document_terms")
+        try:
+            self.conn.execute("DELETE FROM document_embeddings")
+        except sqlite3.OperationalError:
+            pass
         self.conn.execute("DELETE FROM documents")
         self.conn.commit()
+
 
 class SQLiteConfigRepository(ConfigRepository):
     def __init__(self, conn: sqlite3.Connection):

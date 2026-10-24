@@ -1,4 +1,4 @@
-#backend/app/storage/base.py
+# backend/app/storage/base.py
 from abc import ABC, abstractmethod
 from backend.app.models.document import Document
 from backend.app.models.posting import Posting
@@ -38,6 +38,9 @@ class IndexRepository(ABC):
     def get_document_terms(self, doc_id: int) -> dict[str, int]: ...
     @abstractmethod
     def get_vocabulary(self) -> list[str]: ...
+    def add_embedding(self, doc_id: int, vector: list[float]) -> None: ...
+    def get_embeddings(self) -> dict[int, list[float]]:
+        return {}
 
 
 class ConfigRepository(ABC):

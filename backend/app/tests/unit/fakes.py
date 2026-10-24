@@ -1,20 +1,14 @@
-#backend/app/tests/unit/fakes.py
+# backend/app/tests/unit/fakes.py
 from backend.app.storage.base import IndexRepository
 from backend.app.models.posting import Posting
 
 class FakeIndexRepo(IndexRepository):
-    """
-    In-memory stand-in for IndexRepository, shared by ranking-algorithm and
-    Rocchio unit tests. Inherits the ABC (not just duck-typed) so pyright
-    accepts it wherever `index_repo: IndexRepository` is declared, and so
-    Python enforces at instantiation that every abstract method is actually
-    implemented — an interface change breaks this fake loudly instead of
-    letting it silently drift out of sync with the real repository.
-    """
     def __init__(self, postings_by_term: dict[str, list[Posting]] | None = None,
-                 doc_terms: dict[int, dict[str, int]] | None = None):
+                 doc_terms: dict[int, dict[str, int]] | None = None,
+                 embeddings: dict[int, list[float]] | None = None):
         self._postings = postings_by_term or {}
         self._doc_terms = doc_terms or {}
+        self._embeddings = embeddings or {}
 
     def add_posting(self, term: str, postings: list[Posting]) -> None:
         self._postings.setdefault(term, []).extend(postings)
@@ -32,6 +26,7 @@ class FakeIndexRepo(IndexRepository):
     def clear(self) -> None:
         self._postings.clear()
         self._doc_terms.clear()
+        self._embeddings.clear()
 
     def document_frequency(self, term: str) -> int:
         return len(self._postings.get(term, []))
@@ -44,3 +39,9 @@ class FakeIndexRepo(IndexRepository):
 
     def get_vocabulary(self) -> list[str]:
         return list(self._postings.keys())
+
+    def add_embedding(self, doc_id: int, vector: list[float]) -> None:
+        self._embeddings[doc_id] = vector
+
+    def get_embeddings(self) -> dict[int, list[float]]:
+        return self._embeddings
