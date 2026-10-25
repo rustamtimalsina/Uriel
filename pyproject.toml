@@ -1,13 +1,14 @@
 [project]
 name = "uriel"
 version = "0.1.0"
-description = "Add your description here"
+description = "Uriel: Local Contextual Document Retrieval & RAG System"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "en-core-web-sm",
     "fastapi>=0.138.2",
     "fastembed>=0.9.0",
+    "httpx2>=2.14.0",
     "matplotlib>=3.10.9",
     "nltk>=3.9.4",
     "numpy>=2.2.6",
@@ -26,7 +27,12 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["backend/app/tests"]
-pythonpath = ["."]          # <-- add this: makes project root importable as `backend...`
+pythonpath = ["."]
+filterwarnings = [
+    "ignore:.*starlette\\.testclient.*:DeprecationWarning",
+    "ignore:.*httpx.*:DeprecationWarning",
+    "ignore:.*symlinks.*:UserWarning",
+]
 markers = [
     "unit: isolated test of a single class/function",
     "integration: multiple real modules composed, no HTTP layer",
