@@ -4,9 +4,12 @@ import { searchDocuments } from "../../services/api";
 import { IconSearch } from "../icons.jsx";
 import "./SearchBar.css";
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const QUICK_STARTERS = [
+  "Summarize Rustam's technical skills",
+  "What are the benefits of crop diversity?",
+  "Active learning in secondary education",
+  "Sustainable agricultural practices for soil fertility",
+];
 
 const SearchBar = forwardRef(function SearchBar(
   { config, onResults, onError, onLoadingChange, onCorrectedTerms, onSearchMeta },
@@ -16,45 +19,28 @@ const SearchBar = forwardRef(function SearchBar(
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [algorithm, setAlgorithm] = useState(
-    searchParams.get("algorithm") || config.ranking.default_algorithm || "bm25"
+    searchParams.get("algorithm") || config.ranking.default_algorithm || "hybrid"
   );
   const [topK, setTopK] = useState(
     searchParams.get("top_k")
       ? Number(searchParams.get("top_k"))
-      : config.ranking.default_top_k
+      : config.ranking.default_top_k || 10
   );
   const [expandQuery, setExpandQuery] = useState(
     searchParams.get("expand") === "true"
   );
+  const [showFilters, setShowFilters] = useState(false);
 
   const isFirstConfigSync = useRef(true);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      } else if (
-        e.key === "/" &&
-        document.activeElement?.tagName !== "INPUT" &&
-        document.activeElement?.tagName !== "TEXTAREA"
-      ) {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-  useEffect(() => {
     if (isFirstConfigSync.current) {
       isFirstConfigSync.current = false;
       return;
     }
-    setAlgorithm(config.ranking.default_algorithm || "bm25");
-    setTopK(config.ranking.default_top_k);
+    setAlgorithm(config.ranking.default_algorithm || "hybrid");
+    setTopK(config.ranking.default_top_k || 10);
   }, [config.ranking.default_algorithm, config.ranking.default_top_k]);
 
   const runSearch = (queryText) => {
@@ -63,6 +49,8 @@ const SearchBar = forwardRef(function SearchBar(
     if (queryText !== undefined) {
       setQuery(queryText);
     }
+
+    if (!finalQuery.trim()) return;
 
     onLoadingChange(true);
     onError(null);
@@ -89,6 +77,7 @@ const SearchBar = forwardRef(function SearchBar(
             searchTimeMs: response.data.search_time_ms,
             algorithmUsed: response.data.algorithm_used,
             count: response.data.results?.length ?? 0,
+            query: finalQuery,
           });
         }
       })
@@ -122,6 +111,7 @@ const SearchBar = forwardRef(function SearchBar(
             searchTimeMs: response.data.search_time_ms,
             algorithmUsed: response.data.algorithm_used,
             count: response.data.results?.length ?? 0,
+            query: q,
           });
         }
       })
@@ -141,7 +131,7 @@ const SearchBar = forwardRef(function SearchBar(
     runSearchWithCorrections(correctedTerms) {
       let corrected = query;
       Object.entries(correctedTerms).forEach(([original, replacement]) => {
-        const pattern = new RegExp(`\\b${escapeRegExp(original)}\\b`, "gi");
+        const pattern = new RegExp(`\\b${original}\\b`, "gi");
         corrected = corrected.replace(pattern, replacement);
       });
       runSearch(corrected);
@@ -153,76 +143,132 @@ const SearchBar = forwardRef(function SearchBar(
     runSearch();
   };
 
+  const handleQuickStarter = (text) => {
+    setQuery(text);
+    runSearch(text);
+  };
+
   return (
-    <form className="search-form" onSubmit={handleSubmit}>
-      <div className="search-input-wrap">
-        <IconSearch size={16} className="search-input-icon" />
-        <input
-          ref={inputRef}
-          className="search-input"
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search your documents (Press Ctrl+K or / to focus)"
-        />
-      </div>
-
-      <div className="search-segmented" role="group" aria-label="Ranking algorithm">
-        <button
-          type="button"
-          className={`search-segment ${algorithm === "hybrid" ? "is-active" : ""}`}
-          onClick={() => setAlgorithm("hybrid")}
-        >
-          Hybrid
-        </button>
-        <button
-          type="button"
-          className={`search-segment ${algorithm === "bm25" ? "is-active" : ""}`}
-          onClick={() => setAlgorithm("bm25")}
-        >
-          BM25
-        </button>
-        <button
-          type="button"
-          className={`search-segment ${algorithm === "semantic" ? "is-active" : ""}`}
-          onClick={() => setAlgorithm("semantic")}
-        >
-          Semantic
-        </button>
-        <button
-          type="button"
-          className={`search-segment ${algorithm === "tfidf" ? "is-active" : ""}`}
-          onClick={() => setAlgorithm("tfidf")}
-        >
-          TF-IDF
-        </button>
-      </div>
-
-      <input
-        className="search-topk"
-        type="number"
-        value={topK}
-        onChange={(e) => setTopK(Number(e.target.value))}
-        title="Number of results"
-        aria-label="Number of results"
-      />
-
-      <label className="search-toggle">
-        <span className="toggle-switch">
+    <div className="search-bar-wrapper">
+      <form className="search-form-clean" onSubmit={handleSubmit}>
+        <div className="search-input-box">
+          <IconSearch size={18} className="search-input-icon" />
           <input
-            type="checkbox"
-            checked={expandQuery}
-            onChange={(e) => setExpandQuery(e.target.checked)}
+            ref={inputRef}
+            className="search-input-field"
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Ask anything or search your workspace documents..."
           />
-          <span className="toggle-slider"></span>
-        </span>
-        <span className="search-toggle-label">Expand</span>
-      </label>
+          {query && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
-      <button className="search-submit" type="submit">
-        Search
-      </button>
-    </form>
+        <button
+          type="button"
+          className={`search-filter-toggle ${showFilters ? "is-active" : ""}`}
+          onClick={() => setShowFilters(!showFilters)}
+          title="Search Strategy & Filters"
+        >
+          ⚙️ Options
+        </button>
+
+        <button className="search-submit-btn" type="submit">
+          Search
+        </button>
+      </form>
+
+      {/* Expandable Options Drawer */}
+      {showFilters && (
+        <div className="search-filters-drawer">
+          <div className="filter-group">
+            <span className="filter-label">Search Strategy:</span>
+            <div className="filter-segmented">
+              <button
+                type="button"
+                className={`filter-seg-btn ${algorithm === "hybrid" ? "is-active" : ""}`}
+                onClick={() => setAlgorithm("hybrid")}
+                title="Combines AI neural vectors with exact keywords (Recommended)"
+              >
+                ⚡ Smart (AI + Keywords)
+              </button>
+              <button
+                type="button"
+                className={`filter-seg-btn ${algorithm === "bm25" ? "is-active" : ""}`}
+                onClick={() => setAlgorithm("bm25")}
+                title="Strict lexical keyword matching"
+              >
+                🔍 Exact Match
+              </button>
+              <button
+                type="button"
+                className={`filter-seg-btn ${algorithm === "semantic" ? "is-active" : ""}`}
+                onClick={() => setAlgorithm("semantic")}
+                title="Matches semantic concepts even if keywords differ"
+              >
+                🧠 Conceptual
+              </button>
+            </div>
+          </div>
+
+          <div className="filter-controls-row">
+            <div className="filter-item">
+              <span className="filter-label">Show:</span>
+              <select
+                className="filter-select"
+                value={topK}
+                onChange={(e) => setTopK(Number(e.target.value))}
+              >
+                <option value={5}>Top 5 results</option>
+                <option value={10}>Top 10 results</option>
+                <option value={20}>Top 20 results</option>
+                <option value={50}>Top 50 results</option>
+              </select>
+            </div>
+
+            <label className="filter-toggle-label">
+              <input
+                type="checkbox"
+                checked={expandQuery}
+                onChange={(e) => setExpandQuery(e.target.checked)}
+              />
+              <span>Include word synonyms (WordNet)</span>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Suggested Starters when empty */}
+      {!query && (
+        <div className="search-starters">
+          <span className="starters-label">Try asking:</span>
+          <div className="starters-list">
+            {QUICK_STARTERS.map((s, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className="starter-chip"
+                onClick={() => handleQuickStarter(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 });
 

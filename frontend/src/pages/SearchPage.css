@@ -4,7 +4,7 @@
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  margin: 1.5rem auto 1rem auto;
+  margin: 1.5rem auto 0.75rem auto;
   padding: 4px;
   background: var(--surface-sunken);
   border: 1px solid var(--border);
@@ -17,8 +17,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.55rem 1.4rem;
-  font-size: 0.88rem;
+  padding: 0.5rem 1.35rem;
+  font-size: 0.86rem;
   font-weight: 600;
   border-radius: var(--radius-full);
   border: none;
@@ -57,6 +57,8 @@
   font-size: 0.84rem;
   color: var(--text-muted);
   backdrop-filter: var(--blur-glass);
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .search-meta-text {
@@ -81,4 +83,73 @@
   background: var(--accent-soft);
   color: var(--accent);
   border: 1px solid var(--accent-border);
+}
+
+.ai-summary-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  transition: all 0.15s ease;
+}
+
+.ai-summary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.45);
+}
+
+.ai-summary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Inline AI Card */
+.inline-ai-card {
+  max-width: 900px;
+  margin: 0 auto 1.5rem auto;
+  background: #090d16;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-md);
+  padding: 1.4rem 1.6rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.inline-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inline-ai-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.inline-ai-model {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.inline-ai-body {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: #e2e8f0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }

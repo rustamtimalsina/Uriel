@@ -32,13 +32,30 @@
 
 .result-score-badge {
   flex-shrink: 0;
-  padding: 0.15rem 0.55rem;
+  padding: 0.2rem 0.65rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--accent);
-  background: var(--accent-soft);
+  font-weight: 600;
   border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+}
+
+.result-score-badge.score-best {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.result-score-badge.score-high {
+  background: rgba(99, 102, 241, 0.16);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.result-score-badge.score-normal {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .result-snippet {
@@ -78,4 +95,24 @@
 
 .result-action-note-error {
   color: var(--danger);
+}
+
+.result-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.result-action-button:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
 }

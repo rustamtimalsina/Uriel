@@ -8,8 +8,8 @@ function ResultsList({ results }) {
 
   return (
     <div className="results-list">
-      {results.map((result) => (
-        <ResultItem key={result.doc_id} result={result} />
+      {results.map((result, index) => (
+        <ResultItem key={result.doc_id} result={result} rank={index + 1} />
       ))}
     </div>
   );

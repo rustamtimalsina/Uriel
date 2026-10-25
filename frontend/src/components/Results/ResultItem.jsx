@@ -21,7 +21,29 @@ function getFileBadge(title, path) {
   };
 }
 
-function ResultItem({ result }) {
+function getRelevanceInfo(rank, score) {
+  if (rank === 1) {
+    return {
+      label: "⭐ Best Match",
+      className: "score-best",
+      title: `Rank #1 • IR Score: ${score.toFixed(4)}`,
+    };
+  }
+  if (rank <= 3) {
+    return {
+      label: "High Match",
+      className: "score-high",
+      title: `Rank #${rank} • IR Score: ${score.toFixed(4)}`,
+    };
+  }
+  return {
+    label: "Relevant",
+    className: "score-normal",
+    title: `Rank #${rank} • IR Score: ${score.toFixed(4)}`,
+  };
+}
+
+function ResultItem({ result, rank = 1 }) {
   const navigate = useNavigate();
   const [openStatus, setOpenStatus] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -44,6 +66,7 @@ function ResultItem({ result }) {
   };
 
   const badge = getFileBadge(title, path);
+  const relevance = getRelevanceInfo(rank, score);
 
   return (
     <div className="result-card" onClick={() => navigate(`/document/${doc_id}`)}>
@@ -66,7 +89,13 @@ function ResultItem({ result }) {
           </span>
           <div className="result-title">{title}</div>
         </div>
-        <div className="result-score-badge">{score.toFixed(4)}</div>
+
+        <div
+          className={`result-score-badge ${relevance.className}`}
+          title={relevance.title}
+        >
+          {relevance.label}
+        </div>
       </div>
 
       <div
@@ -84,7 +113,7 @@ function ResultItem({ result }) {
           title="Open in default app"
         >
           <IconExternal size={13} />
-          <span>Open</span>
+          <span>Open in App</span>
         </button>
         <button
           type="button"
@@ -93,7 +122,7 @@ function ResultItem({ result }) {
           title="Copy path to clipboard"
         >
           <IconCopy size={13} />
-          <span>{copied ? "Copied" : "Copy Path"}</span>
+          <span>{copied ? "✓ Copied" : "Copy Path"}</span>
         </button>
         {openStatus === "failed" && (
           <span className="result-action-note result-action-note-error">
