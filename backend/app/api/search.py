@@ -1,4 +1,5 @@
 # backend/app/api/search.py
+import time
 from fastapi import APIRouter, Depends
 from backend.app.schemas.search import (
     SearchRequest, SearchResponse, FeedbackRequest, SearchResultsOut,
@@ -24,8 +25,16 @@ def _to_out(results):
 
 @router.post("", response_model=SearchResultsOut)
 def search(request: SearchRequest, svc: SearchService = Depends(get_search_service)) -> SearchResultsOut:
+    start_time = time.perf_counter()
     results, corrections = svc.search(request.query, request.algorithm, request.top_k, request.expand_query)
-    return SearchResultsOut(results=_to_out(results), corrected_terms=corrections)
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    algo_str = request.algorithm.value if request.algorithm else "bm25"
+    return SearchResultsOut(
+        results=_to_out(results),
+        corrected_terms=corrections,
+        search_time_ms=elapsed_ms,
+        algorithm_used=algo_str,
+    )
 
 @router.post("/feedback", response_model=list[SearchResponse])
 def feedback(request: FeedbackRequest, svc: SearchService = Depends(get_search_service)):

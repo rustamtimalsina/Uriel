@@ -6,6 +6,7 @@ import AskAI from "../components/Search/AskAI";
 function SearchPage({ config }) {
   const [activeTab, setActiveTab] = useState("search");
   const [results, setResults] = useState(null);
+  const [searchMeta, setSearchMeta] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [correctedTerms, setCorrectedTerms] = useState(null);
@@ -16,6 +17,13 @@ function SearchPage({ config }) {
 
   const handleUseCorrection = () => {
     searchBarRef.current?.runSearchWithCorrections(correctedTerms);
+  };
+
+  const algoLabels = {
+    hybrid: "Hybrid (BM25 + Semantic Vector RRF)",
+    bm25: "BM25 Probabilistic",
+    semantic: "Semantic Vector (FastEmbed MiniLM-L6)",
+    tfidf: "TF-IDF Vector Space",
   };
 
   return (
@@ -64,6 +72,7 @@ function SearchPage({ config }) {
             onError={setError}
             onLoadingChange={setLoading}
             onCorrectedTerms={setCorrectedTerms}
+            onSearchMeta={setSearchMeta}
           />
 
           {hasCorrections && (
@@ -85,7 +94,46 @@ function SearchPage({ config }) {
 
           {loading && <p className="status-message">Searching...</p>}
           {error && <p className="error-message">{error}</p>}
-          {!loading && !error && results && <ResultsList results={results} />}
+
+          {!loading && !error && results && (
+            <>
+              {searchMeta && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.4rem 0.8rem",
+                    margin: "0.75rem auto",
+                    maxWidth: "800px",
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                    fontSize: "0.82rem",
+                    color: "#475569",
+                  }}
+                >
+                  <span>
+                    Found <strong>{results.length}</strong> {results.length === 1 ? "result" : "results"} in{" "}
+                    <strong>{searchMeta.searchTimeMs} ms</strong>
+                  </span>
+                  <span
+                    style={{
+                      background: "#e0e7ff",
+                      color: "#3730a3",
+                      padding: "0.15rem 0.5rem",
+                      borderRadius: "4px",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                    }}
+                  >
+                    {algoLabels[searchMeta.algorithmUsed] || searchMeta.algorithmUsed}
+                  </span>
+                </div>
+              )}
+              <ResultsList results={results} />
+            </>
+          )}
         </>
       )}
     </>

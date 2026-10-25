@@ -25,6 +25,8 @@ class SearchResponse(BaseModel):
 class SearchResultsOut(BaseModel):
     results: list[SearchResponse]
     corrected_terms: dict[str, str] = {}
+    search_time_ms: float = 0.0
+    algorithm_used: str = "bm25"
 
 class AskRequest(BaseModel):
     question: str

@@ -1,4 +1,4 @@
-#backend/app/schemas/document.py
+# backend/app/schemas/document.py
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
@@ -20,3 +20,12 @@ class BrowseEntryOut(BaseModel):
 class BrowseResponse(BaseModel):
     path: str | None
     entries: list[BrowseEntryOut]
+
+class DocumentContentResponse(BaseModel):
+    doc_id: int
+    title: str
+    path: str
+    page_count: int
+    character_count: int
+    word_count: int
+    content: str

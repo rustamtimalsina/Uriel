@@ -1,17 +1,18 @@
-#backend/app/api/documents.py
+# backend/app/api/documents.py
 from fastapi import APIRouter, Depends, HTTPException, Query
-from backend.app.schemas.document import DocumentReponse, BrowseResponse
+from backend.app.schemas.document import DocumentReponse, BrowseResponse, DocumentContentResponse
 from starlette.responses import FileResponse
 from pathlib import Path
 import mimetypes
 from backend.app.schemas.search import SearchResponse
 from backend.app.services.document_service import DirectoryBrowseError, DocumentService
 from backend.app.services.search_service import SearchService
-from backend.app.api.deps import get_document_service, get_search_service
+from backend.app.parser.content_provider import ContentProvider
+from backend.app.api.deps import get_document_service, get_search_service, get_content_provider
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-@router.get("", response_model = list[DocumentReponse])
+@router.get("", response_model=list[DocumentReponse])
 def list_documents(svc: DocumentService = Depends(get_document_service)):
     """
     List all documents in the system.
@@ -21,8 +22,11 @@ def list_documents(svc: DocumentService = Depends(get_document_service)):
 
 # Must be registered before /{doc_id} — otherwise FastAPI tries to parse
 # "browse" as an int doc_id and returns a 422 instead of matching this route.
-@router.get("/browse", response_model = BrowseResponse)
-def browse(path: str | None = Query(None, description="Path to browse. If not provided, returns the watched directories."), svc: DocumentService = Depends(get_document_service)):
+@router.get("/browse", response_model=BrowseResponse)
+def browse(
+    path: str | None = Query(None, description="Path to browse. If not provided, returns the watched directories."),
+    svc: DocumentService = Depends(get_document_service)
+):
     """
     Browse the contents of a directory, scoped to watched directories.
     """
@@ -30,8 +34,9 @@ def browse(path: str | None = Query(None, description="Path to browse. If not pr
         return svc.browse(path)
     except DirectoryBrowseError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
-@router.get("/{doc_id}", response_model = DocumentReponse)
+
+
+@router.get("/{doc_id}", response_model=DocumentReponse)
 def get_document(doc_id: int, svc: DocumentService = Depends(get_document_service)):
     """
     Get a document by its ID.
@@ -40,6 +45,40 @@ def get_document(doc_id: int, svc: DocumentService = Depends(get_document_servic
     if doc is None:
         raise HTTPException(status_code=404, detail=f"Document with ID {doc_id} not found.")
     return doc
+
+
+@router.get("/{doc_id}/content", response_model=DocumentContentResponse)
+def get_document_content(
+    doc_id: int,
+    svc: DocumentService = Depends(get_document_service),
+    cp: ContentProvider = Depends(get_content_provider)
+):
+    """
+    Returns the parsed, extracted plain text representation of the document,
+    along with page count, word count, and character count.
+    """
+    doc = svc.get_document(doc_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"Document with ID {doc_id} not found.")
+
+    path = Path(doc.path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="File no longer exists on disk.")
+
+    pages = list(cp.iter_pages(str(path)))
+    full_text = "\n\n".join(pages)
+    words = len(full_text.split())
+
+    return DocumentContentResponse(
+        doc_id=doc_id,
+        title=doc.title,
+        path=doc.path,
+        page_count=len(pages),
+        character_count=len(full_text),
+        word_count=words,
+        content=full_text,
+    )
+
 
 @router.get("/{doc_id}/related", response_model=list[SearchResponse])
 def related_documents(doc_id: int, top_k: int = 5, svc: SearchService = Depends(get_search_service)):
@@ -55,10 +94,11 @@ def related_documents(doc_id: int, top_k: int = 5, svc: SearchService = Depends(
         for r in results
     ]
 
+
 @router.get("/{doc_id}/file")
 def get_document_file(doc_id: int, svc: DocumentService = Depends(get_document_service)):
     """
-    Streams the original file (PDF or TXT) exactly as it exists on disk, so
+    Streams the original file (PDF, TXT, DOCX, etc.) exactly as it exists on disk, so
     the frontend can render it in a native/browser PDF viewer or <iframe>
     instead of relying on the parsed text, which has no formatting.
     """
@@ -74,7 +114,5 @@ def get_document_file(doc_id: int, svc: DocumentService = Depends(get_document_s
     media_type = media_type or "application/octet-stream"
 
     response = FileResponse(path, media_type=media_type)
-    # Explicitly "inline" (not "attachment") — this is what lets a PDF render
-    # inside an <iframe>/<embed> instead of triggering a download prompt.
     response.headers["Content-Disposition"] = f'inline; filename="{path.name}"'
     return response

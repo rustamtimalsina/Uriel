@@ -46,6 +46,10 @@ export const getDocument = (docId) => {
   return apiClient.get(`/documents/${docId}`);
 };
 
+export const getDocumentContent = (docId) => {
+  return apiClient.get(`/documents/${docId}/content`);
+};
+
 export const getIndexStats = () => {
   return apiClient.get("/index/stats");
 };

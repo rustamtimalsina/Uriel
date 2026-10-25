@@ -24,6 +24,10 @@ def get_repositories():
     return build_repositories(settings.db_path, settings.data_dir)
 
 @lru_cache
+def get_content_provider() -> ContentProvider:
+    return ContentProvider(PDFParser(), TXTParser(), DOCXParser())
+
+@lru_cache
 def get_spell_corrector() -> SpellCorrector:
     return SpellCorrector()
 
@@ -54,10 +58,9 @@ def get_index_service() -> IndexService:
 def get_search_service() -> SearchService:
     doc_repo, index_repo, config_repo, directory_repo = get_repositories()
     preprocessor = PreprocessingFactory.create(_current_preprocessing_config(config_repo))
-    content_provider = ContentProvider(PDFParser(), TXTParser(), DOCXParser())
     return SearchService(doc_repo, index_repo, preprocessor, config_repo,
                           spell_corrector=get_spell_corrector(),
-                          content_provider=content_provider)
+                          content_provider=get_content_provider())
 
 def get_document_service() -> DocumentService:
     doc_repo, index_repo, config_repo, directory_repo = get_repositories()

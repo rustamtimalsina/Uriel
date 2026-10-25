@@ -9,7 +9,7 @@ function escapeRegExp(value) {
 }
 
 const SearchBar = forwardRef(function SearchBar(
-  { config, onResults, onError, onLoadingChange, onCorrectedTerms },
+  { config, onResults, onError, onLoadingChange, onCorrectedTerms, onSearchMeta },
   ref
 ) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,6 +64,13 @@ const SearchBar = forwardRef(function SearchBar(
       .then((response) => {
         onResults(response.data.results);
         onCorrectedTerms(response.data.corrected_terms);
+        if (onSearchMeta) {
+          onSearchMeta({
+            searchTimeMs: response.data.search_time_ms,
+            algorithmUsed: response.data.algorithm_used,
+            count: response.data.results?.length ?? 0,
+          });
+        }
       })
       .catch((err) => {
         onError(err.message);
@@ -90,6 +97,13 @@ const SearchBar = forwardRef(function SearchBar(
       .then((response) => {
         onResults(response.data.results);
         onCorrectedTerms(response.data.corrected_terms);
+        if (onSearchMeta) {
+          onSearchMeta({
+            searchTimeMs: response.data.search_time_ms,
+            algorithmUsed: response.data.algorithm_used,
+            count: response.data.results?.length ?? 0,
+          });
+        }
       })
       .catch((err) => {
         onError(err.message);
@@ -97,7 +111,7 @@ const SearchBar = forwardRef(function SearchBar(
       .finally(() => {
         onLoadingChange(false);
       });
-  }, [searchParams, algorithm, topK, onError, onLoadingChange, onResults, onCorrectedTerms]);
+  }, [searchParams, algorithm, topK, onError, onLoadingChange, onResults, onCorrectedTerms, onSearchMeta]);
 
   useImperativeHandle(ref, () => ({
     runSearchWithCorrections(correctedTerms) {
