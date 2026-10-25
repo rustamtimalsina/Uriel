@@ -55,7 +55,10 @@ async def upload_document(
     with open(target_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    idx_svc.build_index_async()
+    try:
+        idx_svc.start_build_async()
+    except Exception:
+        pass
 
     return {
         "filename": filename,
@@ -109,7 +112,10 @@ def delete_document(
     if path.is_file():
         path.unlink()
 
-    idx_svc.build_index_async()
+    try:
+        idx_svc.start_build_async()
+    except Exception:
+        pass
     return {"message": f"Document '{doc.title}' removed and re-indexing initiated."}
 
 

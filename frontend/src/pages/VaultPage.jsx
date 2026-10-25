@@ -78,8 +78,24 @@ export default function VaultPage() {
     }
   };
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileUpload(e.dataTransfer.files);
     }
@@ -174,8 +190,9 @@ export default function VaultPage() {
 
       {/* Drag & Drop Upload Zone */}
       <div
-        className="vault-dropzone"
-        onDragOver={(e) => e.preventDefault()}
+        className={`vault-dropzone ${isDragging ? "is-dragging" : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
       >

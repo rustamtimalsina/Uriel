@@ -126,6 +126,13 @@
   transform: translateY(-2px);
 }
 
+.vault-dropzone.is-dragging {
+  border-color: #818cf8;
+  background: rgba(99, 102, 241, 0.16);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+  transform: scale(1.01);
+}
+
 .dropzone-icon {
   font-size: 2rem;
   margin-bottom: 0.5rem;

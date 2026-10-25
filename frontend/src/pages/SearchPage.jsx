@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import SearchBar from "../components/Search/SearchBar";
 import ResultsList from "../components/Results/ResultsList";
 import AskAI from "../components/Search/AskAI";
 import "./SearchPage.css";
 
 function SearchPage({ config }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("search");
   const [results, setResults] = useState(null);
   const [searchMeta, setSearchMeta] = useState(null);
@@ -12,6 +14,26 @@ function SearchPage({ config }) {
   const [loading, setLoading] = useState(false);
   const [correctedTerms, setCorrectedTerms] = useState(null);
   const searchBarRef = useRef(null);
+
+  useEffect(() => {
+    const triggerFocus = () => {
+      setActiveTab("search");
+      setTimeout(() => {
+        searchBarRef.current?.focusInput();
+      }, 60);
+    };
+
+    if (searchParams.get("focus") === "true") {
+      triggerFocus();
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("focus");
+      setSearchParams(nextParams, { replace: true });
+    }
+
+    const handleFocusEvent = () => triggerFocus();
+    window.addEventListener("uriel:focus-search", handleFocusEvent);
+    return () => window.removeEventListener("uriel:focus-search", handleFocusEvent);
+  }, [searchParams, setSearchParams]);
 
   const hasCorrections =
     correctedTerms && Object.keys(correctedTerms).length > 0;

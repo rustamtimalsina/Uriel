@@ -97,8 +97,17 @@
   background: var(--surface-sunken);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   user-select: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-kbd-hint:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--text);
+  transform: translateY(-1px);
 }
 
 .header-kbd-hint kbd {

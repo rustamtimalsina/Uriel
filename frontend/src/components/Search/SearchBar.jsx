@@ -134,6 +134,10 @@ const SearchBar = forwardRef(function SearchBar(
   }, [searchParams, algorithm, topK, onError, onLoadingChange, onResults, onCorrectedTerms, onSearchMeta]);
 
   useImperativeHandle(ref, () => ({
+    focusInput() {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    },
     runSearchWithCorrections(correctedTerms) {
       let corrected = query;
       Object.entries(correctedTerms).forEach(([original, replacement]) => {
