@@ -1,5 +1,6 @@
+import { NavLink } from "react-router-dom";
 import { IconSettings } from "../icons.jsx";
-import { useIndexProgress } from "../../hooks/useIndexProgress"
+import { useIndexProgress } from "../../hooks/useIndexProgress";
 import "./Header.css";
 
 function Header({ onSettingsClick, settingsDisabled = false }) {
@@ -10,27 +11,67 @@ function Header({ onSettingsClick, settingsDisabled = false }) {
     ? progress.total_files > 0
       ? `Indexing ${progress.processed_files}/${progress.total_files}...`
       : "Indexing..."
-    : "Ready";
+    : "Live Sync Active";
 
   return (
     <header className="header">
-      <div className="header-brand">
-        <h1 className="header-title">Local Contextual Document Retrieval</h1>
-        <span className="header-status">
-          <span className="header-status-dot" />
-          {statusText}
-        </span>
+      <div className="header-left">
+        <NavLink to="/" className="header-logo-link">
+          <span className="header-logo-symbol">✦</span>
+          <span className="header-brand-name">URIEL</span>
+          <span className="header-pro-badge">PRO</span>
+        </NavLink>
+
+        <nav className="header-nav">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `header-nav-item ${isActive ? "is-active" : ""}`
+            }
+          >
+            Search & AI
+          </NavLink>
+          <NavLink
+            to="/vault"
+            className={({ isActive }) =>
+              `header-nav-item ${isActive ? "is-active" : ""}`
+            }
+          >
+            Document Vault
+          </NavLink>
+          <NavLink
+            to="/analytics"
+            className={({ isActive }) =>
+              `header-nav-item ${isActive ? "is-active" : ""}`
+            }
+          >
+            IR Analytics
+          </NavLink>
+        </nav>
       </div>
-      <button
-        className="settings-button"
-        type="button"
-        onClick={onSettingsClick}
-        disabled={settingsDisabled}
-        title={settingsDisabled ? "Complete setup first" : "Settings"}
-        aria-label="Settings"
-      >
-        <IconSettings size={18} />
-      </button>
+
+      <div className="header-right">
+        <div className="header-kbd-hint" title="Press Ctrl+K or / anywhere to search">
+          <kbd>Ctrl</kbd> + <kbd>K</kbd>
+        </div>
+
+        <div className="header-status" title="Real-time directory watcher & FastEmbed active">
+          <span className={`header-status-dot ${isRunning ? "is-busy" : ""}`} />
+          <span>{statusText}</span>
+        </div>
+
+        <button
+          className="settings-button"
+          type="button"
+          onClick={onSettingsClick}
+          disabled={settingsDisabled}
+          title={settingsDisabled ? "Complete setup first" : "Engine Settings"}
+          aria-label="Settings"
+        >
+          <IconSettings size={18} />
+        </button>
+      </div>
     </header>
   );
 }

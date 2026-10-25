@@ -46,6 +46,18 @@ export const getDocument = (docId) => {
   return apiClient.get(`/documents/${docId}`);
 };
 
+export const uploadDocument = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiClient.post("/documents/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+export const deleteDocument = (docId) => {
+  return apiClient.delete(`/documents/${docId}`);
+};
+
 export const getDocumentContent = (docId) => {
   return apiClient.get(`/documents/${docId}/content`);
 };

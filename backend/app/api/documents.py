@@ -1,14 +1,20 @@
 # backend/app/api/documents.py
-from fastapi import APIRouter, Depends, HTTPException, Query
-from backend.app.schemas.document import DocumentReponse, BrowseResponse, DocumentContentResponse
-from starlette.responses import FileResponse
-from pathlib import Path
 import mimetypes
+import shutil
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from starlette.responses import FileResponse
+
+from backend.app.schemas.document import DocumentReponse, BrowseResponse, DocumentContentResponse
 from backend.app.schemas.search import SearchResponse
 from backend.app.services.document_service import DirectoryBrowseError, DocumentService
 from backend.app.services.search_service import SearchService
-from backend.app.parser.content_provider import ContentProvider
-from backend.app.api.deps import get_document_service, get_search_service, get_content_provider
+from backend.app.services.index_service import IndexService
+from backend.app.parser.content_provider import ContentProvider, SUPPORTED_EXTENSIONS
+from backend.app.config.settings import get_settings
+from backend.app.api.deps import (
+    get_document_service, get_search_service, get_content_provider, get_index_service
+)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -18,6 +24,45 @@ def list_documents(svc: DocumentService = Depends(get_document_service)):
     List all documents in the system.
     """
     return svc.list_documents()
+
+
+@router.post("/upload")
+async def upload_document(
+    file: UploadFile = File(...),
+    svc: DocumentService = Depends(get_document_service),
+    idx_svc: IndexService = Depends(get_index_service),
+):
+    """
+    Upload a document into the system's watched directory and automatically trigger indexing.
+    """
+    filename = file.filename or "uploaded_file"
+    ext = Path(filename).suffix.lower()
+    if ext not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported format '{ext}'. Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}"
+        )
+
+    watched = svc.directory_repo.list()
+    if watched and Path(watched[0]["path"]).exists():
+        target_dir = Path(watched[0]["path"])
+    else:
+        target_dir = Path(get_settings().data_dir) / "documents"
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / filename
+
+    with open(target_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    idx_svc.build_index_async()
+
+    return {
+        "filename": filename,
+        "path": str(target_path),
+        "size": target_path.stat().st_size,
+        "message": "File uploaded successfully and indexing queued.",
+    }
 
 
 # Must be registered before /{doc_id} — otherwise FastAPI tries to parse
@@ -45,6 +90,27 @@ def get_document(doc_id: int, svc: DocumentService = Depends(get_document_servic
     if doc is None:
         raise HTTPException(status_code=404, detail=f"Document with ID {doc_id} not found.")
     return doc
+
+
+@router.delete("/{doc_id}")
+def delete_document(
+    doc_id: int,
+    svc: DocumentService = Depends(get_document_service),
+    idx_svc: IndexService = Depends(get_index_service),
+):
+    """
+    Delete a document file from disk and trigger index rebuild.
+    """
+    doc = svc.get_document(doc_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"Document with ID {doc_id} not found.")
+
+    path = Path(doc.path)
+    if path.is_file():
+        path.unlink()
+
+    idx_svc.build_index_async()
+    return {"message": f"Document '{doc.title}' removed and re-indexing initiated."}
 
 
 @router.get("/{doc_id}/content", response_model=DocumentContentResponse)

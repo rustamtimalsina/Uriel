@@ -28,6 +28,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .ask-ai-title {
@@ -57,7 +59,7 @@
 .ask-ai-form {
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.85rem;
 }
 
 .ask-ai-input {
@@ -104,6 +106,47 @@
   cursor: not-allowed;
 }
 
+/* Suggested Prompt Chips */
+.ask-ai-quick-prompts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.quick-prompts-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quick-prompts-scroll {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.quick-prompt-chip {
+  padding: 0.3rem 0.7rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-prompt-chip:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: #818cf8;
+}
+
+/* Answer Box */
 .ask-ai-answer-box {
   background: #090d16;
   border: 1px solid var(--border);
@@ -113,6 +156,41 @@
   color: #e2e8f0;
   font-size: 0.95rem;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.ask-ai-box-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ask-ai-model-tag {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.ask-ai-model-tag strong {
+  color: #a5b4fc;
+}
+
+.ask-ai-copy-btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ask-ai-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
 }
 
 .ask-ai-answer-box h3 {
@@ -140,24 +218,16 @@
   color: #ffffff;
 }
 
-.ask-ai-model-tag {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  margin-top: 1rem;
-}
-
 .ask-ai-sources {
   margin-top: 1.25rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 1rem;
 }
 
 .ask-ai-sources-title {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-dim);
   margin-bottom: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;

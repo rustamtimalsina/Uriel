@@ -13,21 +13,29 @@ function formatMarkdown(text) {
     .replace(/\n\n/g, '<br/>');
 }
 
+const SAMPLE_PROMPTS = [
+  "Summarize Rustam's technical skills",
+  "What are the benefits of crop diversity?",
+  "What are active learning strategies in education?",
+  "What are sustainable agricultural practices?",
+];
+
 export default function AskAI() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [answerData, setAnswerData] = useState(null);
   const [error, setError] = useState(null);
+  const [copiedAnswer, setCopiedAnswer] = useState(false);
 
-  const handleAsk = (e) => {
-    e.preventDefault();
-    if (!question.trim()) return;
+  const executeAsk = (qText) => {
+    const finalQ = qText || question;
+    if (!finalQ.trim()) return;
 
     setLoading(true);
     setError(null);
     setAnswerData(null);
 
-    askAI({ question: question.trim(), top_k: 3 })
+    askAI({ question: finalQ.trim(), top_k: 3 })
       .then((res) => {
         setAnswerData(res.data);
       })
@@ -37,6 +45,23 @@ export default function AskAI() {
       .finally(() => {
         setLoading(false);
       });
+  };
+
+  const handleAsk = (e) => {
+    e.preventDefault();
+    executeAsk();
+  };
+
+  const handlePromptClick = (promptText) => {
+    setQuestion(promptText);
+    executeAsk(promptText);
+  };
+
+  const handleCopyAnswer = () => {
+    if (!answerData?.answer) return;
+    navigator.clipboard.writeText(answerData.answer);
+    setCopiedAnswer(true);
+    setTimeout(() => setCopiedAnswer(false), 1500);
   };
 
   return (
@@ -63,21 +88,49 @@ export default function AskAI() {
         </button>
       </form>
 
-      {error && <p className="error-message" style={{ margin: "0.5rem 0" }}>{error}</p>}
+      <div className="ask-ai-quick-prompts">
+        <span className="quick-prompts-label">Suggested:</span>
+        <div className="quick-prompts-scroll">
+          {SAMPLE_PROMPTS.map((p, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="quick-prompt-chip"
+              onClick={() => handlePromptClick(p)}
+              disabled={loading}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && <p className="error-message" style={{ margin: "0.75rem 0" }}>{error}</p>}
 
       {answerData && (
         <div className="ask-ai-answer-box">
+          <div className="ask-ai-box-top">
+            <span className="ask-ai-model-tag">
+              Engine: <strong>{answerData.model_used}</strong> (Local Zero-Cloud)
+            </span>
+            <button
+              type="button"
+              className="ask-ai-copy-btn"
+              onClick={handleCopyAnswer}
+              title="Copy answer text"
+            >
+              {copiedAnswer ? "✓ Copied" : "📋 Copy Answer"}
+            </button>
+          </div>
+
           <div
             dangerouslySetInnerHTML={{ __html: formatMarkdown(answerData.answer) }}
             style={{ lineHeight: 1.6 }}
           />
-          <div style={{ marginTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span className="ask-ai-model-tag">Engine: {answerData.model_used}</span>
-          </div>
 
           {answerData.sources && answerData.sources.length > 0 && (
             <div className="ask-ai-sources">
-              <div className="ask-ai-sources-title">Referenced Documents:</div>
+              <div className="ask-ai-sources-title">Referenced Context Documents:</div>
               <div className="ask-ai-source-pills">
                 {answerData.sources.map((src, idx) => (
                   <Link

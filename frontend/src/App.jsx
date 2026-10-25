@@ -6,6 +6,8 @@ import DirectorySetupModal from "./components/DirectorySetup/DirectorySetupModal
 import OnboardingFlow from "./components/Onboarding/OnboardingFlow";
 import SearchPage from "./pages/SearchPage";
 import DocumentPage from "./pages/DocumentPage";
+import VaultPage from "./pages/VaultPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import { getConfig } from "./services/api";
 import "./App.css";
 
@@ -31,8 +33,6 @@ function App() {
         setConfig(data);
         setConfigError(null);
 
-        // ⚠️ ASSUMPTION: verify `onboarding_completed` is the real field
-        // name in your GET /config response — fix here if it's different.
         if (!data.onboarding?.completed) {
           setOnboardingStartStep(1);
         } else if (data.directories.length === 0) {
@@ -87,6 +87,8 @@ function App() {
           <>
             <Routes>
               <Route path="/" element={<SearchPage config={config} />} />
+              <Route path="/vault" element={<VaultPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/document/:docId" element={<DocumentPage />} />
             </Routes>
 

@@ -28,6 +28,26 @@ const SearchBar = forwardRef(function SearchBar(
   );
 
   const isFirstConfigSync = useRef(true);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      } else if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
   useEffect(() => {
     if (isFirstConfigSync.current) {
       isFirstConfigSync.current = false;
@@ -134,11 +154,12 @@ const SearchBar = forwardRef(function SearchBar(
       <div className="search-input-wrap">
         <IconSearch size={16} className="search-input-icon" />
         <input
+          ref={inputRef}
           className="search-input"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search your documents"
+          placeholder="Search your documents (Press Ctrl+K or / to focus)"
         />
       </div>
 
