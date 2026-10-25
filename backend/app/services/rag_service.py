@@ -105,7 +105,7 @@ class RAGService:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=8) as response:
+            with urllib.request.urlopen(req, timeout=45) as response:
                 if response.status == 200:
                     data = json.loads(response.read().decode("utf-8"))
                     return data.get("response", "").strip()

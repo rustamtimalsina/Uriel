@@ -31,7 +31,7 @@ export const searchDocuments = (searchRequest) => {
 };
 
 export const askAI = (askRequest) => {
-  return apiClient.post("/search/ask", askRequest);
+  return apiClient.post("/search/ask", askRequest, { timeout: 60000 });
 };
 
 export const getConfig = () => {
