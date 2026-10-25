@@ -3,6 +3,16 @@ import { Link } from "react-router-dom";
 import { askAI } from "../../services/api";
 import "./AskAI.css";
 
+function formatMarkdown(text) {
+  if (!text) return "";
+  return text
+    .replace(/^### (.*$)/gim, '<h4 style="margin: 0.75rem 0 0.5rem 0; font-size: 1.05rem; color: #1e293b;">$1</h4>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.*$)/gim, '<div style="margin: 0.5rem 0; padding: 0.5rem 0.75rem; background: #ffffff; border-left: 3px solid #6366f1; border-radius: 4px;">$1</div>')
+    .replace(/\*(.*?)\*/g, '<em style="color: #64748b;">$1</em>')
+    .replace(/\n\n/g, '<br/>');
+}
+
 export default function AskAI() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,7 +55,7 @@ export default function AskAI() {
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="e.g. Summarize key points from the report..."
+          placeholder="e.g. What are Rustam's technical skills and experience?"
           disabled={loading}
         />
         <button className="ask-ai-btn" type="submit" disabled={loading || !question.trim()}>
@@ -57,8 +67,13 @@ export default function AskAI() {
 
       {answerData && (
         <div className="ask-ai-answer-box">
-          <div style={{ whiteSpace: "pre-wrap" }}>{answerData.answer}</div>
-          <span className="ask-ai-model-tag">Engine: {answerData.model_used}</span>
+          <div
+            dangerouslySetInnerHTML={{ __html: formatMarkdown(answerData.answer) }}
+            style={{ lineHeight: 1.6 }}
+          />
+          <div style={{ marginTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="ask-ai-model-tag">Engine: {answerData.model_used}</span>
+          </div>
 
           {answerData.sources && answerData.sources.length > 0 && (
             <div className="ask-ai-sources">
