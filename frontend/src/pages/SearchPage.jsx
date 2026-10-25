@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import SearchBar from "../components/Search/SearchBar";
 import ResultsList from "../components/Results/ResultsList";
 import AskAI from "../components/Search/AskAI";
+import "./SearchPage.css";
 
 function SearchPage({ config }) {
   const [activeTab, setActiveTab] = useState("search");
@@ -28,36 +29,20 @@ function SearchPage({ config }) {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", margin: "1rem 0" }}>
+      <div className="search-tabs-container">
         <button
           type="button"
           onClick={() => setActiveTab("search")}
-          style={{
-            padding: "0.5rem 1.25rem",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            background: activeTab === "search" ? "#0f172a" : "#ffffff",
-            color: activeTab === "search" ? "#ffffff" : "#334155",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className={`search-tab-btn ${activeTab === "search" ? "is-active" : ""}`}
         >
-          Document Search
+          🔍 Document Search
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("ai")}
-          style={{
-            padding: "0.5rem 1.25rem",
-            borderRadius: "8px",
-            border: "1px solid #6366f1",
-            background: activeTab === "ai" ? "#6366f1" : "#ffffff",
-            color: activeTab === "ai" ? "#ffffff" : "#4338ca",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className={`search-tab-btn ${activeTab === "ai" ? "is-active ai" : ""}`}
         >
-          Ask Uriel AI (RAG)
+          ✨ Ask Uriel AI (RAG)
         </button>
       </div>
 
@@ -98,35 +83,12 @@ function SearchPage({ config }) {
           {!loading && !error && results && (
             <>
               {searchMeta && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.4rem 0.8rem",
-                    margin: "0.75rem auto",
-                    maxWidth: "800px",
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "6px",
-                    fontSize: "0.82rem",
-                    color: "#475569",
-                  }}
-                >
-                  <span>
-                    Found <strong>{results.length}</strong> {results.length === 1 ? "result" : "results"} in{" "}
+                <div className="search-meta-bar">
+                  <div className="search-meta-text">
+                    ⚡ Found <strong>{results.length}</strong> {results.length === 1 ? "result" : "results"} in{" "}
                     <strong>{searchMeta.searchTimeMs} ms</strong>
-                  </span>
-                  <span
-                    style={{
-                      background: "#e0e7ff",
-                      color: "#3730a3",
-                      padding: "0.15rem 0.5rem",
-                      borderRadius: "4px",
-                      fontWeight: 600,
-                      fontSize: "0.75rem",
-                    }}
-                  >
+                  </div>
+                  <span className="search-meta-pill">
                     {algoLabels[searchMeta.algorithmUsed] || searchMeta.algorithmUsed}
                   </span>
                 </div>

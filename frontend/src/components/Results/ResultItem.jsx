@@ -8,16 +8,16 @@ function getFileBadge(title, path) {
   const target = title || path || "";
   const ext = target.includes(".") ? target.split('.').pop().toUpperCase() : "DOC";
   const colors = {
-    PDF: { bg: '#fee2e2', text: '#991b1b' },
-    DOCX: { bg: '#dbeafe', text: '#1e40af' },
-    DOC: { bg: '#dbeafe', text: '#1e40af' },
-    TXT: { bg: '#f1f5f9', text: '#334155' },
-    MD: { bg: '#f3e8ff', text: '#6b21a8' },
-    CSV: { bg: '#dcfce7', text: '#166534' },
+    PDF: { bg: "rgba(239, 68, 68, 0.16)", text: "#f87171", border: "rgba(239, 68, 68, 0.35)" },
+    DOCX: { bg: "rgba(59, 130, 246, 0.16)", text: "#60a5fa", border: "rgba(59, 130, 246, 0.35)" },
+    DOC: { bg: "rgba(59, 130, 246, 0.16)", text: "#60a5fa", border: "rgba(59, 130, 246, 0.35)" },
+    TXT: { bg: "rgba(16, 185, 129, 0.16)", text: "#34d399", border: "rgba(16, 185, 129, 0.35)" },
+    MD: { bg: "rgba(168, 85, 247, 0.16)", text: "#c084fc", border: "rgba(168, 85, 247, 0.35)" },
+    CSV: { bg: "rgba(245, 158, 11, 0.16)", text: "#fbbf24", border: "rgba(245, 158, 11, 0.35)" },
   };
   return {
     label: ext,
-    style: colors[ext] || { bg: '#f1f5f9', text: '#475569' }
+    style: colors[ext] || { bg: "rgba(148, 163, 184, 0.16)", text: "#94a3b8", border: "rgba(148, 163, 184, 0.35)" }
   };
 }
 
@@ -48,51 +48,56 @@ function ResultItem({ result }) {
   return (
     <div className="result-card" onClick={() => navigate(`/document/${doc_id}`)}>
       <div className="result-card-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <span
             style={{
-              padding: "0.15rem 0.45rem",
+              padding: "0.15rem 0.5rem",
               borderRadius: "4px",
               fontSize: "0.7rem",
+              fontFamily: "var(--font-mono)",
               fontWeight: 700,
               background: badge.style.bg,
               color: badge.style.text,
+              border: `1px solid ${badge.style.border}`,
+              letterSpacing: "0.04em",
             }}
           >
             {badge.label}
           </span>
-          <h3 className="result-title">{title}</h3>
+          <div className="result-title">{title}</div>
         </div>
-        <span className="result-score-badge">{score.toFixed(3)}</span>
+        <div className="result-score-badge">{score.toFixed(4)}</div>
       </div>
 
-      <p
+      <div
         className="result-snippet"
         dangerouslySetInnerHTML={{ __html: snippet }}
       />
-      <p className="result-path">{path}</p>
+
+      <div className="result-path">{path}</div>
 
       <div className="result-actions">
         <button
-          className="icon-button"
+          type="button"
+          className="result-action-button"
           onClick={handleOpen}
-          title="Open file"
-          aria-label="Open file"
+          title="Open in default app"
         >
-          <IconExternal size={15} />
+          <IconExternal size={13} />
+          <span>Open</span>
         </button>
         <button
-          className="icon-button"
+          type="button"
+          className="result-action-button"
           onClick={handleCopy}
-          title="Copy file path"
-          aria-label="Copy file path"
+          title="Copy path to clipboard"
         >
-          <IconCopy size={15} />
+          <IconCopy size={13} />
+          <span>{copied ? "Copied" : "Copy Path"}</span>
         </button>
-        {copied && <span className="action-hint">Copied!</span>}
         {openStatus === "failed" && (
-          <span className="action-hint action-hint-error">
-            Couldn&apos;t open file
+          <span className="result-action-note result-action-note-error">
+            Couldn't open this file.
           </span>
         )}
       </div>

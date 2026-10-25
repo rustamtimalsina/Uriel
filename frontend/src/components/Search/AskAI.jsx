@@ -6,10 +6,10 @@ import "./AskAI.css";
 function formatMarkdown(text) {
   if (!text) return "";
   return text
-    .replace(/^### (.*$)/gim, '<h4 style="margin: 0.75rem 0 0.5rem 0; font-size: 1.05rem; color: #1e293b;">$1</h4>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^- (.*$)/gim, '<div style="margin: 0.5rem 0; padding: 0.5rem 0.75rem; background: #ffffff; border-left: 3px solid #6366f1; border-radius: 4px;">$1</div>')
-    .replace(/\*(.*?)\*/g, '<em style="color: #64748b;">$1</em>')
+    .replace(/^### (.*$)/gim, '<h4 style="margin: 0.9rem 0 0.5rem 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">$1</h4>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #ffffff;">$1</strong>')
+    .replace(/^[-*] (.*$)/gim, '<div style="margin: 0.45rem 0; padding: 0.45rem 0.85rem; background: rgba(255, 255, 255, 0.04); border-left: 3px solid #818cf8; border-radius: 4px; color: #e2e8f0;">$1</div>')
+    .replace(/\*(.*?)\*/g, '<em style="color: #94a3b8;">$1</em>')
     .replace(/\n\n/g, '<br/>');
 }
 
@@ -46,7 +46,7 @@ export default function AskAI() {
           <span>Ask Uriel AI</span>
           <span className="ask-ai-badge">RAG</span>
         </div>
-        <small style={{ color: "#64748b" }}>Ask questions across your indexed documents</small>
+        <small style={{ color: "var(--text-muted)" }}>Ask questions across your indexed documents</small>
       </div>
 
       <form className="ask-ai-form" onSubmit={handleAsk}>
