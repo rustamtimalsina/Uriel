@@ -67,39 +67,42 @@ class DirectoryWatcherService:
         except Exception:
             logger.exception("Failed to trigger automatic indexing")
 
-    def sync_watches(self):
-        """Update observer watches to match current directories in directory_repo."""
-        if not self.observer or not self._running:
-            return
-
+    def _schedule_dirs(self):
         current_dirs = {
             os.path.abspath(d["path"])
             for d in self.directory_repo.list()
             if os.path.isdir(d["path"])
         }
+        handler = DocumentChangeHandler(self._on_directory_changed)
+        for path in current_dirs:
+            try:
+                self.observer.schedule(handler, path, recursive=True)
+                self._watched_paths.add(path)
+                logger.info("Directory watcher active on: %s", path)
+            except Exception as e:
+                logger.warning("Could not watch path %s: %s", path, e)
+
+    def sync_watches(self):
+        """Update observer watches to match current directories in directory_repo."""
+        if not self.observer or not self._running:
+            return
 
         with self._lock:
-            # Stop existing and restart with updated directory list
-            self.observer.unschedule_all()
+            try:
+                self.observer.unschedule_all()
+            except Exception:
+                pass
             self._watched_paths.clear()
-
-            handler = DocumentChangeHandler(self._on_directory_changed)
-            for path in current_dirs:
-                try:
-                    self.observer.schedule(handler, path, recursive=True)
-                    self._watched_paths.add(path)
-                    logger.info("Directory watcher active on: %s", path)
-                except Exception as e:
-                    logger.warning("Could not watch path %s: %s", path, e)
+            self._schedule_dirs()
 
     def start(self):
         with self._lock:
             if self._running:
                 return
             self.observer = Observer()
-            self._running = True
-            self.sync_watches()
             self.observer.daemon = True
+            self._running = True
+            self._schedule_dirs()
             self.observer.start()
             logger.info("DirectoryWatcherService started.")
 
