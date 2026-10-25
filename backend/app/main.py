@@ -1,4 +1,7 @@
 # backend/app/main.py
+import os
+import zipfile
+import logging
 import nltk
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -6,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api import search, index, config as config_api, documents
 from backend.app.api.deps import get_repositories, get_index_service, get_watcher_service
 from backend.app.config.settings import get_settings
+
+logger = logging.getLogger("uriel")
 
 REQUIRED_NLTK_RESOURCES = [
     ("stopwords", "corpora/stopwords"),
@@ -17,22 +22,41 @@ def ensure_nltk_resources() -> None:
         try:
             nltk.data.find(path)
         except LookupError:
-            print(f"Downloading NLTK resources: {resource}")
-            nltk.download(resource, quiet=True)
+            try:
+                zip_path = None
+                try:
+                    zip_path = nltk.data.find(f"{path}.zip")
+                except LookupError:
+                    pass
+                if zip_path:
+                    extract_dir = os.path.dirname(zip_path)
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(extract_dir)
+                    logger.info(f"Extracted cached {resource} from {zip_path}")
+                else:
+                    logger.info(f"Downloading NLTK resource: {resource}...")
+                    nltk.download(resource, quiet=True)
+            except Exception as e:
+                logger.warning(f"Could not load NLTK {resource}: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure required nltk corpora exist
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Initializing Uriel resources...")
     ensure_nltk_resources()
     
-    get_repositories()  # warms the shared cache: connects, applies schema, seeds default dir
+    get_repositories()
     if get_settings().auto_index_on_startup:
+        logger.info("Auto-indexing watched folders...")
         get_index_service().start_build_async()
 
     watcher = None
     if get_settings().enable_file_watcher:
         watcher = get_watcher_service()
         watcher.start()
+        logger.info("Directory watcher active.")
+
+    logger.info("Uriel is fully ready! API docs available at http://127.0.0.1:8000/docs")
     try:
         yield
     finally:
