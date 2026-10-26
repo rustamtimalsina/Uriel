@@ -382,21 +382,73 @@
 .source-pill-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.55rem;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
   background: rgba(99, 102, 241, 0.15);
   color: #a5b4fc;
   border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: var(--radius-full);
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-family: var(--font-mono);
   text-decoration: none;
   font-weight: 500;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  max-width: 320px;
 }
 
 .source-pill-link:hover {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.35);
+  border-color: #818cf8;
   color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.source-pill-idx {
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.source-pill-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.source-pill-arrow {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.source-pill-link:hover .source-pill-arrow {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
+/* Interactive Inline Citations in AI Message text */
+.inline-citation-badge {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  margin: 0 0.15rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 4px;
+  text-decoration: none;
+  vertical-align: baseline;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.inline-citation-badge:hover {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #a5b4fc;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+  transform: translateY(-1px);
 }
 
 .thinking-bubble {

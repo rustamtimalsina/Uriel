@@ -335,6 +335,162 @@
   border-color: var(--accent);
 }
 
+/* Sticky Citation Toolbar */
+.doc-citation-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.25rem;
+  background: rgba(15, 23, 42, 0.92);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.35);
+  backdrop-filter: blur(12px);
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.citation-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1 1 360px;
+}
+
+.citation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.45);
+}
+
+.citation-inline-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.7rem;
+  min-width: 180px;
+  max-width: 280px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.citation-inline-input:focus {
+  border-color: #818cf8;
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3);
+}
+
+.citation-count {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.citation-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.citation-ctrl-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.citation-ctrl-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: #818cf8;
+  color: #ffffff;
+}
+
+.citation-ctrl-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.citation-clear-btn {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 0.25rem;
+}
+
+.citation-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+/* PDF Citation Banner */
+.doc-pdf-citation-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1.15rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.85rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pdf-citation-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.86rem;
+  color: #e2e8f0;
+}
+
+.pdf-pulse-icon {
+  color: #818cf8;
+  animation: pulse 1.8s infinite;
+}
+
+.pdf-switch-view-btn {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25));
+  border: 1px solid rgba(129, 140, 248, 0.5);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pdf-switch-view-btn:hover {
+  background: rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+
 /* Reader Body & Canvas */
 .doc-reader-body {
   padding: 0;
@@ -356,40 +512,108 @@
 
 /* IDE-Style Document Text Canvas */
 .doc-canvas-box {
-  display: flex;
   background: #090d16;
-  min-height: 500px;
-  max-height: 650px;
+  min-height: 520px;
+  max-height: 680px;
   overflow: auto;
   font-family: var(--font-mono);
   font-size: 0.88rem;
-  line-height: 1.7;
+  line-height: 1.65;
+  position: relative;
 }
 
-.doc-canvas-gutter {
+.doc-canvas-code-stream {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+}
+
+.doc-line-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 1.65em;
+  transition: background-color 0.15s ease;
+}
+
+.doc-line-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.doc-line-gutter {
   user-select: none;
-  padding: 1.25rem 0.85rem 1.25rem 1.25rem;
+  flex-shrink: 0;
+  width: 4rem;
+  padding: 0.15rem 0.85rem 0.15rem 0.5rem;
   text-align: right;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.doc-gutter-num {
-  font-size: 0.76rem;
   color: #475569;
-  line-height: 1.7;
+  font-size: 0.76rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.doc-canvas-pre {
+.doc-line-code {
   flex: 1;
-  margin: 0;
-  padding: 1.25rem 1.5rem;
+  padding: 0.15rem 1.25rem;
   color: #e2e8f0;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
+}
+
+.doc-empty-char {
+  user-select: none;
+}
+
+.doc-canvas-empty {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Highlighted Match Rows */
+.doc-line-row.is-match-row {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.doc-line-row.is-active-match-row {
+  background: rgba(99, 102, 241, 0.22);
+  border-left: 3px solid #818cf8;
+  animation: citationPulse 2s ease-in-out infinite;
+}
+
+.doc-line-row.is-active-match-row .doc-line-gutter {
+  color: #818cf8;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.15);
+}
+
+/* Citation Marks on Keywords */
+.citation-mark {
+  background: rgba(245, 158, 11, 0.28);
+  color: #fef08a;
+  border-bottom: 2px solid #f59e0b;
+  padding: 0.05rem 0.2rem;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.citation-mark.is-active-mark {
+  background: rgba(129, 140, 248, 0.45);
+  color: #ffffff;
+  border-bottom: 2px solid #818cf8;
+  box-shadow: 0 0 10px rgba(129, 140, 248, 0.6);
+  font-weight: 700;
+}
+
+@keyframes citationPulse {
+  0% {
+    background-color: rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    background-color: rgba(99, 102, 241, 0.35);
+  }
+  100% {
+    background-color: rgba(99, 102, 241, 0.2);
+  }
 }
 
 /* Related Documents */

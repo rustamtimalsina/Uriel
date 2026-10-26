@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { openFileBestEffort, copyPathToClipboard } from "../../utils/fileOpen";
+import { extractHighlightTerms } from "../../utils/citationHelper";
 import { IconExternal, IconCopy } from "../icons.jsx";
 import "./ResultItem.css";
 
@@ -67,9 +68,13 @@ function ResultItem({ result, rank = 1 }) {
 
   const badge = getFileBadge(title, path);
   const relevance = getRelevanceInfo(rank, score);
+  const highlightTerm = extractHighlightTerms(snippet);
+  const docTargetUrl = highlightTerm
+    ? `/document/${doc_id}?highlight=${encodeURIComponent(highlightTerm)}`
+    : `/document/${doc_id}`;
 
   return (
-    <div className="result-card" onClick={() => navigate(`/document/${doc_id}`)}>
+    <div className="result-card" onClick={() => navigate(docTargetUrl)}>
       <div className="result-card-header">
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <span

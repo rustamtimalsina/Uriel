@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   getDocument,
@@ -7,6 +7,10 @@ import {
   buildDocumentFileUrl,
 } from "../services/api";
 import { openFileBestEffort, copyPathToClipboard } from "../utils/fileOpen";
+import {
+  findMatchLineIndices,
+  tokenizeLineForHighlight,
+} from "../utils/citationHelper";
 import ResultsList from "../components/Results/ResultsList";
 import "./DocumentPage.css";
 
@@ -28,6 +32,9 @@ function DocumentPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const initialHighlight = searchParams.get("highlight") || "";
+
   const [docData, setDocData] = useState(null);
   const [contentData, setContentData] = useState(null);
   const [relatedDocuments, setRelatedDocuments] = useState(null);
@@ -38,6 +45,19 @@ function DocumentPage() {
   const [openStatus, setOpenStatus] = useState(null);
   const [activeTab, setActiveTab] = useState("preview"); // "preview" | "text"
   const [textFilter, setTextFilter] = useState("");
+
+  // Citation highlight & navigator state
+  const [highlightQuery, setHighlightQuery] = useState(initialHighlight);
+  const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
+  const canvasContainerRef = useRef(null);
+
+  // Sync state if URL query param changes
+  useEffect(() => {
+    if (initialHighlight) {
+      setHighlightQuery(initialHighlight);
+      setCurrentMatchIdx(0);
+    }
+  }, [initialHighlight]);
 
   useEffect(() => {
     setLoading(true);
@@ -100,20 +120,74 @@ function DocumentPage() {
     }
   };
 
-  const fileUrl = docId ? buildDocumentFileUrl(docId) : "";
   const isPdf = docData?.path?.toLowerCase().endsWith(".pdf");
   const badge = getFileBadge(docData?.path);
 
-  const rawLines = contentData?.content ? contentData.content.split("\n") : [];
-  const filteredLines = textFilter.trim()
-    ? rawLines.filter((line) => line.toLowerCase().includes(textFilter.toLowerCase()))
-    : rawLines;
+  // Compute lines
+  const rawLines = useMemo(() => {
+    return contentData?.content ? contentData.content.split("\n") : [];
+  }, [contentData]);
+
+  const filteredLines = useMemo(() => {
+    if (!textFilter.trim()) return rawLines;
+    const filterLower = textFilter.toLowerCase();
+    return rawLines.filter((line) => line.toLowerCase().includes(filterLower));
+  }, [rawLines, textFilter]);
+
+  const linesToDisplay = activeTab === "text" && textFilter.trim() ? filteredLines : rawLines;
+
+  // Match line indices for active highlight
+  const matchLineIndices = useMemo(() => {
+    return findMatchLineIndices(linesToDisplay, highlightQuery);
+  }, [linesToDisplay, highlightQuery]);
+
+  // Auto-scroll to target match line when activeTab or match index changes
+  useEffect(() => {
+    if (matchLineIndices.length === 0) return;
+    const targetIdx = matchLineIndices[currentMatchIdx];
+    if (targetIdx === undefined) return;
+
+    // Wait for DOM paint
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`doc-line-${targetIdx + 1}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [currentMatchIdx, matchLineIndices, activeTab]);
+
+  const handlePrevMatch = () => {
+    if (matchLineIndices.length <= 1) return;
+    setCurrentMatchIdx((prev) => (prev - 1 + matchLineIndices.length) % matchLineIndices.length);
+  };
+
+  const handleNextMatch = () => {
+    if (matchLineIndices.length <= 1) return;
+    setCurrentMatchIdx((prev) => (prev + 1) % matchLineIndices.length);
+  };
+
+  const handleClearHighlight = () => {
+    setHighlightQuery("");
+    setCurrentMatchIdx(0);
+  };
+
+  // PDF Search URL
+  const fileUrl = useMemo(() => {
+    if (!docId) return "";
+    const base = buildDocumentFileUrl(docId);
+    if (isPdf && highlightQuery) {
+      return `${base}#search=${encodeURIComponent(highlightQuery.slice(0, 40))}`;
+    }
+    return base;
+  }, [docId, isPdf, highlightQuery]);
 
   return (
     <div className="doc-page-container">
       <div className="doc-top-bar">
         <button className="doc-back-btn" type="button" onClick={handleBack}>
-          ← Back to Search
+          ← Back
         </button>
       </div>
 
@@ -233,44 +307,128 @@ function DocumentPage() {
               )}
             </div>
 
+            {/* Citation Toolbar (Sticky across Canvas) */}
+            {highlightQuery && (
+              <div className="doc-citation-bar">
+                <div className="citation-bar-left">
+                  <span className="citation-badge">🎯 Citation Match</span>
+                  <input
+                    type="text"
+                    className="citation-inline-input"
+                    value={highlightQuery}
+                    onChange={(e) => {
+                      setHighlightQuery(e.target.value);
+                      setCurrentMatchIdx(0);
+                    }}
+                    placeholder="Filter citation terms..."
+                    title="Edit citation search term"
+                  />
+                  <span className="citation-count">
+                    {matchLineIndices.length > 0
+                      ? `Line match ${currentMatchIdx + 1} of ${matchLineIndices.length}`
+                      : "0 line matches"}
+                  </span>
+                </div>
+
+                <div className="citation-bar-controls">
+                  <button
+                    type="button"
+                    className="citation-ctrl-btn"
+                    onClick={handlePrevMatch}
+                    disabled={matchLineIndices.length <= 1}
+                    title="Jump to previous match"
+                  >
+                    ▲ Prev
+                  </button>
+                  <button
+                    type="button"
+                    className="citation-ctrl-btn"
+                    onClick={handleNextMatch}
+                    disabled={matchLineIndices.length <= 1}
+                    title="Jump to next match"
+                  >
+                    ▼ Next
+                  </button>
+                  <button
+                    type="button"
+                    className="citation-clear-btn"
+                    onClick={handleClearHighlight}
+                    title="Dismiss citation highlight"
+                  >
+                    ✕ Clear
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="doc-reader-body">
-              {activeTab === "preview" ? (
-                isPdf ? (
-                  <div className="doc-pdf-wrapper">
-                    <iframe
-                      src={fileUrl}
-                      title={docData.title}
-                      className="doc-pdf-frame"
-                    />
-                  </div>
-                ) : (
-                  <div className="doc-canvas-box">
-                    <div className="doc-canvas-gutter">
-                      {rawLines.map((_, i) => (
-                        <div key={i} className="doc-gutter-num">
-                          {i + 1}
-                        </div>
-                      ))}
-                    </div>
-                    <pre className="doc-canvas-pre">
-                      {contentData?.content || "No text content available."}
-                    </pre>
-                  </div>
-                )
-              ) : (
-                <div className="doc-canvas-box">
-                  <div className="doc-canvas-gutter">
-                    {filteredLines.map((_, i) => (
-                      <div key={i} className="doc-gutter-num">
-                        {i + 1}
+              {activeTab === "preview" && isPdf ? (
+                <div className="doc-pdf-wrapper">
+                  {highlightQuery && (
+                    <div className="doc-pdf-citation-banner">
+                      <div className="pdf-citation-info">
+                        <span className="pdf-pulse-icon">✦</span>
+                        <span>
+                          Citation query: <strong>"{highlightQuery}"</strong>
+                        </span>
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        className="pdf-switch-view-btn"
+                        onClick={() => setActiveTab("text")}
+                      >
+                        Inspect Line in Code Canvas ↗
+                      </button>
+                    </div>
+                  )}
+                  <iframe
+                    src={fileUrl}
+                    title={docData.title}
+                    className="doc-pdf-frame"
+                  />
+                </div>
+              ) : (
+                /* IDE-Grade Document Canvas with Gutter Numbers and Highlighting */
+                <div className="doc-canvas-box" ref={canvasContainerRef}>
+                  <div className="doc-canvas-code-stream">
+                    {linesToDisplay.length > 0 ? (
+                      linesToDisplay.map((line, idx) => {
+                        const lineNum = idx + 1;
+                        const isMatch = matchLineIndices.includes(idx);
+                        const isActiveMatch = matchLineIndices[currentMatchIdx] === idx;
+                        const tokens = tokenizeLineForHighlight(line, highlightQuery);
+
+                        return (
+                          <div
+                            key={idx}
+                            id={`doc-line-${lineNum}`}
+                            className={`doc-line-row ${isMatch ? "is-match-row" : ""} ${isActiveMatch ? "is-active-match-row" : ""}`}
+                          >
+                            <span className="doc-line-gutter">{lineNum}</span>
+                            <span className="doc-line-code">
+                              {tokens.map((token, tIdx) =>
+                                token.isMatch ? (
+                                  <mark
+                                    key={tIdx}
+                                    className={`citation-mark ${isActiveMatch ? "is-active-mark" : ""}`}
+                                  >
+                                    {token.text}
+                                  </mark>
+                                ) : (
+                                  <span key={tIdx}>{token.text}</span>
+                                )
+                              )}
+                              {line.length === 0 && <span className="doc-empty-char">&nbsp;</span>}
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="doc-canvas-empty">
+                        No text content available.
+                      </div>
+                    )}
                   </div>
-                  <pre className="doc-canvas-pre">
-                    {filteredLines.length > 0
-                      ? filteredLines.join("\n")
-                      : "No matching lines found."}
-                  </pre>
                 </div>
               )}
             </div>

@@ -7,16 +7,34 @@ import {
   deleteChatSession,
   sendChatMessage,
 } from "../../services/api";
+import { extractHighlightTerms } from "../../utils/citationHelper";
 import "./AskAI.css";
 
-function formatMarkdown(text) {
+function formatMarkdown(text, sources = []) {
   if (!text) return "";
-  return text
+  let formatted = text
     .replace(/^### (.*$)/gim, '<h4 style="margin: 0.9rem 0 0.5rem 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">$1</h4>')
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #ffffff;">$1</strong>')
     .replace(/^[-*] (.*$)/gim, '<div style="margin: 0.45rem 0; padding: 0.45rem 0.85rem; background: rgba(255, 255, 255, 0.04); border-left: 3px solid #818cf8; border-radius: 4px; color: #e2e8f0;">$1</div>')
     .replace(/\*(.*?)\*/g, '<em style="color: #94a3b8;">$1</em>')
     .replace(/\n\n/g, '<br/>');
+
+  // Interactive inline citations: [1], [2]
+  if (sources && sources.length > 0) {
+    formatted = formatted.replace(/\[(\d+)\]/g, (match, p1) => {
+      const idx = parseInt(p1, 10) - 1;
+      const src = sources[idx];
+      if (src && src.doc_id) {
+        const term = extractHighlightTerms(src.snippet);
+        const url = `/document/${src.doc_id}${term ? `?highlight=${encodeURIComponent(term)}` : ""}`;
+        const cleanTitle = (src.title || "").replace(/"/g, "&quot;");
+        return `<a href="${url}" class="inline-citation-badge" title="Source [${p1}]: ${cleanTitle}">[${p1}]</a>`;
+      }
+      return match;
+    });
+  }
+
+  return formatted;
 }
 
 const SAMPLE_PROMPTS = [
@@ -297,23 +315,29 @@ export default function AskAI() {
 
                   <div
                     className="message-text"
-                    dangerouslySetInnerHTML={{ __html: formatMarkdown(m.content) }}
+                    dangerouslySetInnerHTML={{ __html: formatMarkdown(m.content, m.sources) }}
                   />
 
                   {m.sources && m.sources.length > 0 && (
                     <div className="message-sources-box">
                       <span className="sources-label">Referenced Sources:</span>
                       <div className="sources-pills-row">
-                        {m.sources.map((src, idx) => (
-                          <Link
-                            key={src.doc_id || idx}
-                            to={`/document/${src.doc_id}`}
-                            className="source-pill-link"
-                            title={src.path}
-                          >
-                            [{idx + 1}] {src.title}
-                          </Link>
-                        ))}
+                        {m.sources.map((src, idx) => {
+                          const term = extractHighlightTerms(src.snippet);
+                          const url = `/document/${src.doc_id}${term ? `?highlight=${encodeURIComponent(term)}` : ""}`;
+                          return (
+                            <Link
+                              key={src.doc_id || idx}
+                              to={url}
+                              className="source-pill-link"
+                              title={`${src.title}\nPath: ${src.path}`}
+                            >
+                              <span className="source-pill-idx">[{idx + 1}]</span>
+                              <span className="source-pill-title">{src.title}</span>
+                              <span className="source-pill-arrow">↗</span>
+                            </Link>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
