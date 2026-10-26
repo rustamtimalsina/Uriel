@@ -463,6 +463,25 @@
   animation: pulse 1.5s infinite;
 }
 
+/* Streaming Blinking Terminal Cursor */
+.is-streaming-cursor::after {
+  content: "▋";
+  display: inline-block;
+  margin-left: 3px;
+  color: #818cf8;
+  animation: blinkCursor 0.8s infinite;
+  vertical-align: baseline;
+}
+
+@keyframes blinkCursor {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 /* Input Bar */
 .chat-input-bar {
   display: flex;

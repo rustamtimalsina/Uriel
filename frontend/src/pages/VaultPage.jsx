@@ -6,8 +6,18 @@ import {
   uploadDocument,
   deleteDocument,
   buildDocumentFileUrl,
+  getDocumentSummary,
 } from "../services/api";
 import "./VaultPage.css";
+
+function formatSummary(text) {
+  if (!text) return "";
+  return text
+    .replace(/^### (.*$)/gim, '<h4 class="summary-subhead">$1</h4>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^[-*] (.*$)/gim, '<div class="summary-bullet"><span class="bullet-dot">✦</span><span>$1</span></div>')
+    .replace(/\n\n/g, '<br/>');
+}
 
 function getFileBadge(title, path) {
   const target = title || path || "";
@@ -31,11 +41,59 @@ export default function VaultPage() {
   const [uploading, setUploading] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const [toast, setToast] = useState(null);
+  const [summaryModal, setSummaryModal] = useState(null);
+  const [copiedSummary, setCopiedSummary] = useState(false);
   const fileInputRef = useRef(null);
+  const summariesCache = useRef({});
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleSummarize = async (doc, e) => {
+    e.stopPropagation();
+    if (summariesCache.current[doc.doc_id]) {
+      setSummaryModal({
+        ...doc,
+        summary: summariesCache.current[doc.doc_id].summary,
+        model_used: summariesCache.current[doc.doc_id].model_used,
+        loading: false,
+      });
+      return;
+    }
+
+    setSummaryModal({
+      ...doc,
+      summary: null,
+      model_used: null,
+      loading: true,
+    });
+
+    try {
+      const res = await getDocumentSummary(doc.doc_id);
+      summariesCache.current[doc.doc_id] = res.data;
+      setSummaryModal({
+        ...doc,
+        summary: res.data.summary,
+        model_used: res.data.model_used,
+        loading: false,
+      });
+    } catch (err) {
+      showToast(err.response?.data?.detail || "Failed to generate executive summary", "error");
+      setSummaryModal(null);
+    }
+  };
+
+  const handleCopySummary = async () => {
+    if (!summaryModal?.summary) return;
+    try {
+      await navigator.clipboard.writeText(summaryModal.summary);
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 1500);
+    } catch {
+      // Fallback
+    }
   };
 
   const loadData = useCallback(() => {
@@ -268,6 +326,14 @@ export default function VaultPage() {
                       <div className="vault-actions-cell" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
+                          className="vault-action-btn brief-btn"
+                          title="Generate 3-bullet AI executive summary"
+                          onClick={(e) => handleSummarize(doc, e)}
+                        >
+                          ✨ Brief
+                        </button>
+                        <button
+                          type="button"
                           className="vault-action-btn"
                           title="Read in Document Canvas"
                           onClick={() => navigate(`/document/${doc.doc_id}`)}
@@ -298,6 +364,77 @@ export default function VaultPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Executive Briefing Modal */}
+      {summaryModal && (
+        <div className="vault-modal-overlay" onClick={() => setSummaryModal(null)}>
+          <div className="vault-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="vault-modal-header">
+              <div className="modal-header-left">
+                <span className="modal-tag">✨ Executive Briefing</span>
+                <h3 className="modal-doc-title">{summaryModal.title}</h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSummaryModal(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="vault-modal-body">
+              {summaryModal.loading ? (
+                <div className="modal-loading-box">
+                  <span className="modal-pulse-icon">✦</span>
+                  <p>Synthesizing 3-bullet executive briefing with Llama 3.2...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="modal-meta-row">
+                    <span className="modal-model-badge">
+                      Model: {summaryModal.model_used || "Llama 3.2"} (Local)
+                    </span>
+                    <span className="modal-word-count">
+                      Corpus: {summaryModal.length?.toLocaleString() || 0} words
+                    </span>
+                  </div>
+
+                  <div
+                    className="modal-summary-content"
+                    dangerouslySetInnerHTML={{
+                      __html: formatSummary(summaryModal.summary),
+                    }}
+                  />
+                </>
+              )}
+            </div>
+
+            <div className="vault-modal-footer">
+              <div className="modal-footer-left">
+                <button
+                  type="button"
+                  className="modal-btn modal-btn-secondary"
+                  onClick={handleCopySummary}
+                  disabled={summaryModal.loading}
+                >
+                  {copiedSummary ? "✓ Copied!" : "📋 Copy Brief"}
+                </button>
+              </div>
+
+              <div className="modal-footer-right">
+                <button
+                  type="button"
+                  className="modal-btn modal-btn-primary"
+                  onClick={() => navigate(`/document/${summaryModal.doc_id}`)}
+                >
+                  👁️ Inspect in Canvas
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

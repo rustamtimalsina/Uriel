@@ -5,7 +5,7 @@ import {
   createChatSession,
   getChatSession,
   deleteChatSession,
-  sendChatMessage,
+  streamChatMessage,
 } from "../../services/api";
 import { extractHighlightTerms } from "../../utils/citationHelper";
 import "./AskAI.css";
@@ -120,14 +120,14 @@ export default function AskAI() {
     });
   };
 
-  const handleSend = (textToSend) => {
+  const handleSend = async (textToSend) => {
     const text = textToSend || inputMessage;
     if (!text.trim() || !activeSessionId || loading) return;
 
     tempIdCounter.current += 1;
-    const tempId = -tempIdCounter.current;
+    const userTempId = -tempIdCounter.current;
     const userMsg = {
-      id: tempId,
+      id: userTempId,
       session_id: activeSessionId,
       role: "user",
       content: text,
@@ -135,43 +135,102 @@ export default function AskAI() {
       created_at: new Date().toISOString(),
     };
 
-    // Optimistically update UI
+    tempIdCounter.current += 1;
+    const assistantTempId = -tempIdCounter.current;
+    const initialAssistantMsg = {
+      id: assistantTempId,
+      session_id: activeSessionId,
+      role: "assistant",
+      content: "",
+      sources: [],
+      created_at: new Date().toISOString(),
+      isStreaming: true,
+    };
+
+    // Optimistically update UI with both user and streaming assistant bubble
     setActiveSession((prev) => ({
       ...prev,
-      messages: [...(prev?.messages || []), userMsg],
+      messages: [...(prev?.messages || []), userMsg, initialAssistantMsg],
     }));
     setInputMessage("");
     setLoading(true);
-    setTimeout(scrollToBottom, 50);
+    setTimeout(scrollToBottom, 40);
 
-    sendChatMessage(activeSessionId, { content: text, top_k: 3 })
-      .then((res) => {
-        const assistantMsg = res.data;
-        setActiveSession((prev) => ({
-          ...prev,
-          messages: [...(prev?.messages || []).filter((m) => m.id !== tempId), userMsg, assistantMsg],
-        }));
-        listChatSessions().then((sRes) => setSessions(sRes.data || []));
-      })
-      .catch((err) => {
-        tempIdCounter.current += 1;
-        const errorMsg = {
-          id: -tempIdCounter.current,
-          session_id: activeSessionId,
-          role: "assistant",
-          content: `⚠️ Error querying local AI: ${err.response?.data?.detail || err.message}`,
-          sources: [],
-          created_at: new Date().toISOString(),
-        };
-        setActiveSession((prev) => ({
-          ...prev,
-          messages: [...(prev?.messages || []), errorMsg],
-        }));
-      })
-      .finally(() => {
-        setLoading(false);
-        setTimeout(scrollToBottom, 60);
-      });
+    let streamedText = "";
+    let assistantSources = [];
+
+    try {
+      await streamChatMessage(
+        activeSessionId,
+        { content: text, top_k: 3 },
+        (event) => {
+          if (event.type === "sources") {
+            assistantSources = event.sources || [];
+            setActiveSession((prev) => ({
+              ...prev,
+              messages: (prev?.messages || []).map((m) =>
+                m.id === assistantTempId ? { ...m, sources: assistantSources } : m
+              ),
+            }));
+          } else if (event.type === "token") {
+            streamedText += event.token;
+            setActiveSession((prev) => ({
+              ...prev,
+              messages: (prev?.messages || []).map((m) =>
+                m.id === assistantTempId ? { ...m, content: streamedText } : m
+              ),
+            }));
+            scrollToBottom();
+          } else if (event.type === "done") {
+            setActiveSession((prev) => ({
+              ...prev,
+              messages: (prev?.messages || []).map((m) =>
+                m.id === assistantTempId
+                  ? {
+                      ...m,
+                      id: event.id || assistantTempId,
+                      content: event.full_content || streamedText,
+                      sources: event.sources || assistantSources,
+                      isStreaming: false,
+                    }
+                  : m
+              ),
+            }));
+            listChatSessions().then((sRes) => setSessions(sRes.data || []));
+          }
+        },
+        (err) => {
+          setActiveSession((prev) => ({
+            ...prev,
+            messages: (prev?.messages || []).map((m) =>
+              m.id === assistantTempId
+                ? {
+                    ...m,
+                    content: `⚠️ Error querying local AI: ${err.message}`,
+                    isStreaming: false,
+                  }
+                : m
+            ),
+          }));
+        }
+      );
+    } catch (err) {
+      setActiveSession((prev) => ({
+        ...prev,
+        messages: (prev?.messages || []).map((m) =>
+          m.id === assistantTempId
+            ? {
+                ...m,
+                content: `⚠️ Connection failed: ${err.message}`,
+                isStreaming: false,
+              }
+            : m
+        ),
+      }));
+    } finally {
+      setLoading(false);
+      setTimeout(scrollToBottom, 60);
+    }
   };
 
   const handleCopyMessage = (msgId, content) => {
@@ -314,8 +373,12 @@ export default function AskAI() {
                   </div>
 
                   <div
-                    className="message-text"
-                    dangerouslySetInnerHTML={{ __html: formatMarkdown(m.content, m.sources) }}
+                    className={`message-text ${m.isStreaming ? "is-streaming-cursor" : ""}`}
+                    dangerouslySetInnerHTML={{
+                      __html: m.content
+                        ? formatMarkdown(m.content, m.sources)
+                        : '<span class="thinking-dots">Thinking with Llama 3.2...</span>',
+                    }}
                   />
 
                   {m.sources && m.sources.length > 0 && (
@@ -344,15 +407,6 @@ export default function AskAI() {
                 </div>
               </div>
             ))
-          )}
-
-          {loading && (
-            <div className="chat-message-row is-assistant">
-              <div className="message-avatar">✦</div>
-              <div className="message-bubble thinking-bubble">
-                <span className="thinking-dots">Synthesizing answer with Llama 3.2</span>
-              </div>
-            </div>
           )}
 
           <div ref={messagesEndRef} />

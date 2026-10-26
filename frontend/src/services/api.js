@@ -40,6 +40,54 @@ export const getChatSession = (sessionId) => apiClient.get(`/chat/sessions/${ses
 export const deleteChatSession = (sessionId) => apiClient.delete(`/chat/sessions/${sessionId}`);
 export const sendChatMessage = (sessionId, data) => apiClient.post(`/chat/sessions/${sessionId}/message`, data, { timeout: 60000 });
 
+export const streamChatMessage = async (sessionId, data, onEvent, onError) => {
+  const baseUrl = apiClient.defaults.baseURL;
+  const url = `${baseUrl}/chat/sessions/${sessionId}/message/stream`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || `HTTP ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const eventData = JSON.parse(trimmed.slice(6));
+            onEvent(eventData);
+          } catch {
+            // Ignore parse error
+          }
+        }
+      }
+    }
+  } catch (err) {
+    if (onError) onError(err);
+    else throw err;
+  }
+};
+
 export const getConfig = () => {
   return apiClient.get("/config");
 };
@@ -50,6 +98,10 @@ export const getDocuments = () => {
 
 export const getDocument = (docId) => {
   return apiClient.get(`/documents/${docId}`);
+};
+
+export const getDocumentSummary = (docId) => {
+  return apiClient.get(`/documents/${docId}/summary`, { timeout: 60000 });
 };
 
 export const uploadDocument = (file) => {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import SearchBar from "../components/Search/SearchBar";
 import ResultsList from "../components/Results/ResultsList";
@@ -43,6 +43,9 @@ function SearchPage({ config }) {
   const [correctedTerms, setCorrectedTerms] = useState(null);
   const [aiAnswer, setAiAnswer] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [formatFilter, setFormatFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("relevance");
+  const [subFilter, setSubFilter] = useState("");
   const searchBarRef = useRef(null);
 
   useEffect(() => {
@@ -75,7 +78,53 @@ function SearchPage({ config }) {
   const handleResults = (newResults) => {
     setResults(newResults);
     setAiAnswer(null); // Reset inline AI answer on new search
+    setFormatFilter("all");
+    setSubFilter("");
+    setSortBy("relevance");
   };
+
+  // Compute format counts for facets
+  const formatCounts = useMemo(() => {
+    if (!results) return {};
+    const counts = {};
+    results.forEach((r) => {
+      const ext = (r.title || r.path || "").split(".").pop().toUpperCase();
+      counts[ext] = (counts[ext] || 0) + 1;
+    });
+    return counts;
+  }, [results]);
+
+  // Compute filtered & sorted results
+  const filteredAndSortedResults = useMemo(() => {
+    if (!results) return [];
+    let list = [...results];
+
+    // Format filter
+    if (formatFilter !== "all") {
+      list = list.filter((r) => {
+        const ext = (r.title || r.path || "").split(".").pop().toUpperCase();
+        return ext === formatFilter;
+      });
+    }
+
+    // Sub-filter
+    if (subFilter.trim()) {
+      const sub = subFilter.toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(sub) ||
+          r.path.toLowerCase().includes(sub) ||
+          r.snippet.toLowerCase().includes(sub)
+      );
+    }
+
+    // Sort
+    if (sortBy === "title") {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    return list;
+  }, [results, formatFilter, subFilter, sortBy]);
 
   const handleQuickAsk = () => {
     if (!searchMeta?.query) return;
@@ -212,7 +261,80 @@ function SearchPage({ config }) {
                 </div>
               )}
 
-              <ResultsList results={results} />
+              {/* Faceted Filter Toolbar */}
+              <div className="faceted-filter-bar">
+                <div className="facet-pills-row">
+                  <button
+                    type="button"
+                    className={`facet-pill ${formatFilter === "all" ? "is-active" : ""}`}
+                    onClick={() => setFormatFilter("all")}
+                  >
+                    All ({results.length})
+                  </button>
+                  {Object.entries(formatCounts).map(([fmt, count]) => (
+                    <button
+                      key={fmt}
+                      type="button"
+                      className={`facet-pill ${formatFilter === fmt ? "is-active" : ""}`}
+                      onClick={() => setFormatFilter(fmt)}
+                    >
+                      {fmt} ({count})
+                    </button>
+                  ))}
+                </div>
+
+                <div className="facet-controls-right">
+                  <input
+                    type="text"
+                    className="facet-subfilter-input"
+                    placeholder="Filter results..."
+                    value={subFilter}
+                    onChange={(e) => setSubFilter(e.target.value)}
+                  />
+
+                  <select
+                    className="facet-sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="relevance">⚡ Sort: Smart</option>
+                    <option value="title">🔤 Sort: Title (A-Z)</option>
+                  </select>
+
+                  {(formatFilter !== "all" || subFilter.trim() || sortBy !== "relevance") && (
+                    <button
+                      type="button"
+                      className="facet-reset-btn"
+                      onClick={() => {
+                        setFormatFilter("all");
+                        setSubFilter("");
+                        setSortBy("relevance");
+                      }}
+                      title="Reset filters"
+                    >
+                      ✕ Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {filteredAndSortedResults.length === 0 ? (
+                <div className="facet-empty-matches">
+                  <p>No results match the selected filter.</p>
+                  <button
+                    type="button"
+                    className="facet-reset-link"
+                    onClick={() => {
+                      setFormatFilter("all");
+                      setSubFilter("");
+                    }}
+                  >
+                    Show all {results.length} results
+                  </button>
+                </div>
+              ) : (
+                <ResultsList results={filteredAndSortedResults} />
+              )}
             </>
           )}
         </>

@@ -10,10 +10,11 @@ from backend.app.schemas.search import SearchResponse
 from backend.app.services.document_service import DirectoryBrowseError, DocumentService
 from backend.app.services.search_service import SearchService
 from backend.app.services.index_service import IndexService
+from backend.app.services.rag_service import RAGService
 from backend.app.parser.content_provider import ContentProvider, SUPPORTED_EXTENSIONS
 from backend.app.config.settings import get_settings
 from backend.app.api.deps import (
-    get_document_service, get_search_service, get_content_provider, get_index_service
+    get_document_service, get_search_service, get_content_provider, get_index_service, get_rag_service
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -188,3 +189,40 @@ def get_document_file(doc_id: int, svc: DocumentService = Depends(get_document_s
     response = FileResponse(path, media_type=media_type)
     response.headers["Content-Disposition"] = f'inline; filename="{path.name}"'
     return response
+
+
+@router.get("/{doc_id}/summary")
+def get_document_summary(
+    doc_id: int,
+    svc: DocumentService = Depends(get_document_service),
+    cp: ContentProvider = Depends(get_content_provider),
+    rag: RAGService = Depends(get_rag_service),
+):
+    """
+    Generates an executive briefing for the document using Ollama llama3.2 (or extractive fallback).
+    """
+    doc = svc.get_document(doc_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail=f"Document with ID {doc_id} not found.")
+
+    path = Path(doc.path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="File no longer exists on disk.")
+
+    pages = list(cp.iter_pages(str(path)))
+    full_text = "\n\n".join(pages)
+    if not full_text.strip():
+        return {
+            "doc_id": doc_id,
+            "title": doc.title,
+            "summary": "This document contains no readable text content to summarize.",
+            "model_used": "none",
+        }
+
+    result = rag.summarize_document(title=doc.title, text=full_text)
+    return {
+        "doc_id": doc_id,
+        "title": doc.title,
+        "summary": result["summary"],
+        "model_used": result["model_used"],
+    }
