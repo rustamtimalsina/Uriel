@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: uriel
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: ENV
+        value: production
+      - key: AUTO_INDEX_ON_STARTUP
+        value: "true"
+      - key: ENABLE_FILE_WATCHER
+        value: "false"
+      - key: DB_PATH
+        value: /app/backend/app/data/uriel.db
+      - key: DATA_DIR
+        value: /app/data/documents

@@ -4,7 +4,20 @@ const STORAGE_KEY = "apiBaseUrl";
 const DEFAULT_BASE_URL = "http://127.0.0.1:8000";
 
 function readStoredBaseUrl() {
-  return localStorage.getItem(STORAGE_KEY) || DEFAULT_BASE_URL;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) return stored;
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // If running in production on a remote domain (e.g. Render / Docker), use current window origin
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  ) {
+    return window.location.origin;
+  }
+  return DEFAULT_BASE_URL;
 }
 
 const apiClient = axios.create({
