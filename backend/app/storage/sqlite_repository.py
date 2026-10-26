@@ -203,3 +203,101 @@ class SQLiteDirectoryRepository(DirectoryRepository):
         
         self.conn.execute("DELETE FROM watched_directories WHERE id = ?", (dir_id,))
         self.conn.commit()
+
+
+class SQLiteChatRepository:
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+
+    def create_session(self, title: str) -> dict:
+        now = datetime.now(timezone.utc).isoformat()
+        cur = self.conn.execute(
+            "INSERT INTO chat_sessions (title, created_at, updated_at) VALUES (?, ?, ?)",
+            (title, now, now),
+        )
+        self.conn.commit()
+        return {
+            "id": cur.lastrowid,
+            "title": title,
+            "created_at": now,
+            "updated_at": now,
+            "messages": [],
+        }
+
+    def list_sessions(self) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT id, title, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC"
+        ).fetchall()
+        return [
+            {"id": r[0], "title": r[1], "created_at": r[2], "updated_at": r[3]}
+            for r in rows
+        ]
+
+    def get_session(self, session_id: int) -> dict | None:
+        sess = self.conn.execute(
+            "SELECT id, title, created_at, updated_at FROM chat_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        if not sess:
+            return None
+
+        msg_rows = self.conn.execute(
+            """SELECT id, role, content, sources_json, model_used, created_at
+               FROM chat_messages WHERE session_id = ? ORDER BY id ASC""",
+            (session_id,),
+        ).fetchall()
+
+        messages = []
+        for m in msg_rows:
+            sources = json.loads(m[3]) if m[3] else []
+            messages.append({
+                "id": m[0],
+                "role": m[1],
+                "content": m[2],
+                "sources": sources,
+                "model_used": m[4],
+                "created_at": m[5],
+            })
+
+        return {
+            "id": sess[0],
+            "title": sess[1],
+            "created_at": sess[2],
+            "updated_at": sess[3],
+            "messages": messages,
+        }
+
+    def add_message(self, session_id: int, role: str, content: str, sources: list = None, model: str = None) -> dict:
+        now = datetime.now(timezone.utc).isoformat()
+        sources_blob = json.dumps(sources) if sources else None
+        cur = self.conn.execute(
+            """INSERT INTO chat_messages (session_id, role, content, sources_json, model_used, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (session_id, role, content, sources_blob, model, now),
+        )
+        self.conn.execute(
+            "UPDATE chat_sessions SET updated_at = ? WHERE id = ?",
+            (now, session_id),
+        )
+        self.conn.commit()
+        return {
+            "id": cur.lastrowid,
+            "session_id": session_id,
+            "role": role,
+            "content": content,
+            "sources": sources or [],
+            "model_used": model,
+            "created_at": now,
+        }
+
+    def update_session_title(self, session_id: int, title: str) -> None:
+        self.conn.execute(
+            "UPDATE chat_sessions SET title = ? WHERE id = ?",
+            (title, session_id),
+        )
+        self.conn.commit()
+
+    def delete_session(self, session_id: int) -> None:
+        self.conn.execute("DELETE FROM chat_messages WHERE session_id = ?", (session_id,))
+        self.conn.execute("DELETE FROM chat_sessions WHERE id = ?", (session_id,))
+        self.conn.commit()

@@ -40,5 +40,23 @@ CREATE TABLE IF NOT EXISTS document_embeddings (
     embedding      BLOB NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    title      TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id   INTEGER NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    role         TEXT NOT NULL,
+    content      TEXT NOT NULL,
+    sources_json TEXT,
+    model_used   TEXT,
+    created_at   TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_document_terms_doc ON document_terms(doc_id);
 CREATE INDEX IF NOT EXISTS idx_postings_term ON postings(term);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id);

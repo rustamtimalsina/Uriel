@@ -73,3 +73,12 @@ def get_watcher_service() -> DirectoryWatcherService:
 
 def get_rag_service() -> RAGService:
     return RAGService(get_search_service())
+
+
+from backend.app.storage.factory import build_chat_repository
+from backend.app.storage.sqlite_repository import SQLiteChatRepository
+
+@lru_cache
+def get_chat_repository() -> SQLiteChatRepository:
+    settings = get_settings()
+    return build_chat_repository(settings.db_path, settings.data_dir)

@@ -34,6 +34,12 @@ export const askAI = (askRequest) => {
   return apiClient.post("/search/ask", askRequest, { timeout: 60000 });
 };
 
+export const listChatSessions = () => apiClient.get("/chat/sessions");
+export const createChatSession = (title = "New Conversation") => apiClient.post("/chat/sessions", { title });
+export const getChatSession = (sessionId) => apiClient.get(`/chat/sessions/${sessionId}`);
+export const deleteChatSession = (sessionId) => apiClient.delete(`/chat/sessions/${sessionId}`);
+export const sendChatMessage = (sessionId, data) => apiClient.post(`/chat/sessions/${sessionId}/message`, data, { timeout: 60000 });
+
 export const getConfig = () => {
   return apiClient.get("/config");
 };
