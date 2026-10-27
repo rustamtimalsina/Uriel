@@ -13,7 +13,10 @@ _EMBED_MODEL: TextEmbedding | None = None
 def get_embed_model() -> TextEmbedding:
     global _EMBED_MODEL
     if _EMBED_MODEL is None:
-        _EMBED_MODEL = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        _EMBED_MODEL = TextEmbedding(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            threads=1,
+        )
     return _EMBED_MODEL
 
 

@@ -25,7 +25,7 @@ class ResourceManager:
         """
         if model_name not in cls._spacy_models:
             logger.info("Loading spaCy model '%s'", model_name)
-            cls._spacy_models[model_name] = spacy.load(model_name)
+            cls._spacy_models[model_name] = spacy.load(model_name, exclude=["ner", "parser"])
 
         return cls._spacy_models[model_name]
     

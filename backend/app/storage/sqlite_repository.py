@@ -46,6 +46,10 @@ class SQLiteDocumentRepository(DocumentRepository):
         row = self.conn.execute("SELECT 1 FROM documents where path = ?", (path,)).fetchone()
         return row is not None
 
+    def count(self) -> int:
+        row = self.conn.execute("SELECT COUNT(*) FROM documents").fetchone()
+        return row[0] if row else 0
+
     def next_id(self) -> int:
         row = self.conn.execute("SELECT COALESCE(MAX(doc_id), -1) FROM documents").fetchone()
         return row[0] + 1

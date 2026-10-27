@@ -1,4 +1,5 @@
 # backend/app/index/indexer.py
+import gc
 import os
 from datetime import datetime
 from logging import getLogger
@@ -121,4 +122,5 @@ class Indexer:
             except Exception:
                 logger.warning("Could not generate embedding for %s", path)
 
+        gc.collect()
         return True

@@ -48,10 +48,14 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing Uriel resources...")
     ensure_nltk_resources()
     
-    get_repositories()
+    repos = get_repositories()
     if get_settings().auto_index_on_startup:
-        logger.info("Auto-indexing watched folders...")
-        get_index_service().start_build_async()
+        doc_count = repos["doc"].count() if hasattr(repos["doc"], "count") else len(repos["doc"].all())
+        if doc_count == 0:
+            logger.info("Corpus is empty. Launching initial background index...")
+            get_index_service().start_build_async()
+        else:
+            logger.info("Found %d pre-indexed documents in repository. Skipping redundant startup index.", doc_count)
 
     watcher = None
     if get_settings().enable_file_watcher:
