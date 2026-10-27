@@ -49,8 +49,9 @@ async def lifespan(app: FastAPI):
     ensure_nltk_resources()
     
     repos = get_repositories()
+    doc_repo = repos[0]
     if get_settings().auto_index_on_startup:
-        doc_count = repos["doc"].count() if hasattr(repos["doc"], "count") else len(repos["doc"].all())
+        doc_count = doc_repo.count() if hasattr(doc_repo, "count") else len(doc_repo.all())
         if doc_count == 0:
             logger.info("Corpus is empty. Launching initial background index...")
             get_index_service().start_build_async()
